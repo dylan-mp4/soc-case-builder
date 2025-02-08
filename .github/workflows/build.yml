@@ -31,6 +31,10 @@ jobs:
       run: |
         pyinstaller soc_case_builder.spec
 
+    - name: Zip the executable
+      run: |
+        powershell Compress-Archive -Path dist/soc_case_builder -DestinationPath dist/soc_case_builder.zip
+
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -48,6 +52,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: dist/soc_case_builder.exe
-        asset_name: soc_case_builder.exe
-        asset_content_type: application/octet-stream
+        asset_path: dist/soc_case_builder.zip
+        asset_name: soc_case_builder.zip
+        asset_content_type: application/zip
