@@ -25,8 +25,6 @@ class CaseBuilderWindow(QMainWindow):
         self.settings_tab = SettingsTab()
         self.case_builder_tab = CaseBuilderTab(self.settings_tab)
 
-        
-
         self.central_widget.addTab(self.case_builder_tab, "Case 1")
 
     def closeEvent(self, event):
@@ -94,6 +92,7 @@ class CaseBuilderWindow(QMainWindow):
 
         # Create a new form layout and add copies of the widgets from settings_form_layout
         form_layout = QFormLayout()
+        new_fields = {}
         for i in range(self.settings_tab.settings_form_layout.rowCount()):
             label_item = self.settings_tab.settings_form_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
             field_item = self.settings_tab.settings_form_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
@@ -104,14 +103,23 @@ class CaseBuilderWindow(QMainWindow):
                     new_field = QLineEdit()
                     new_field.setText(field.text())
                     form_layout.addRow(label, new_field)
-                elif isinstance(field, QPushButton):
-                    new_button = QPushButton(field.text())
-                    new_button.clicked.connect(field.click)
-                    form_layout.addRow(new_button)
+                    new_fields[label] = new_field
+
+        # Add the save settings button
+        save_button = QPushButton("Save Settings")
+        save_button.clicked.connect(lambda: self.save_settings_from_dialog(new_fields))
+        form_layout.addRow(save_button)
 
         layout.addLayout(form_layout)
         dialog.setLayout(layout)
         dialog.exec()
+
+    def save_settings_from_dialog(self, new_fields):
+        self.settings_tab.settings_sign_off_user.setText(new_fields["Sign off (User):"].text())
+        self.settings_tab.settings_sign_off_org.setText(new_fields["Sign off (Org):"].text())
+        self.settings_tab.settings_abuse_api_key.setText(new_fields["AbuseIPDB API Key:"].text())
+        self.settings_tab.settings_vt_api_key.setText(new_fields["VirusTotal API Key:"].text())
+        self.settings_tab.save_settings()
 
     def save_case(self):
         current_index = self.central_widget.currentIndex()
