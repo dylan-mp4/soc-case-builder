@@ -4,9 +4,7 @@ from PyQt6.QtWidgets import (
     QTextEdit, QComboBox, QHBoxLayout
 )
 import csv
-import json
-import requests
-from src.utils.api_requests import get_abuse_info, get_domain_info, get_hash_info
+from src.utils.api_requests import get_abuse_info, get_domain_info, get_hash_info, get_url_info
 class CaseBuilderTab(QWidget):
     def __init__(self, settings_tab):
         super().__init__()
@@ -22,13 +20,13 @@ class CaseBuilderTab(QWidget):
         self.entity_positions = {}
         self.custom_entities = []
 
+        self.add_field_with_button("Username:", self.common_fields_layout)
+        self.add_field_with_button("Role:", self.common_fields_layout)
+        self.add_field_with_button("Host:", self.common_fields_layout)
         self.add_field_with_button("IP:", self.common_fields_layout)
         self.add_field_with_button("Domain:", self.common_fields_layout)
         self.add_field_with_button("Hash:", self.common_fields_layout)
         self.add_field_with_button("URL:", self.common_fields_layout)
-        self.add_field_with_button("Host:", self.common_fields_layout)
-        self.add_field_with_button("Username:", self.common_fields_layout)
-        self.add_field_with_button("Role:", self.common_fields_layout)
         self.scroll_layout.addLayout(self.common_fields_layout)
 
         self.add_custom_entity_button = QPushButton("Add Custom Entity")
@@ -69,6 +67,7 @@ class CaseBuilderTab(QWidget):
         self.escalation_layout.addRow("Client:", self.client_combo)
         self.escalation_layout.addRow("Crux:", self.crux_field)
         self.escalation_layout.addRow("Information:", self.escalation_info)
+        # deprecated sign off fields
         # self.escalation_layout.addRow("Sign off (User):", self.sign_off_user)
         # self.escalation_layout.addRow("Sign off (Org):", self.sign_off_org)
 
@@ -179,13 +178,13 @@ class CaseBuilderTab(QWidget):
 
         # Re-add the default fields
         self.entity_positions.clear()
+        self.add_field_with_button("Username:", self.common_fields_layout)
+        self.add_field_with_button("Role:", self.common_fields_layout)
+        self.add_field_with_button("Host:", self.common_fields_layout)
         self.add_field_with_button("IP:", self.common_fields_layout)
         self.add_field_with_button("Domain:", self.common_fields_layout)
         self.add_field_with_button("Hash:", self.common_fields_layout)
         self.add_field_with_button("URL:", self.common_fields_layout)
-        self.add_field_with_button("Host:", self.common_fields_layout)
-        self.add_field_with_button("Username:", self.common_fields_layout)
-        self.add_field_with_button("Role:", self.common_fields_layout)
         self.common_fields_layout.addRow(self.add_custom_entity_button)
 
         self.client_combo.setCurrentIndex(0)
@@ -213,7 +212,7 @@ class CaseBuilderTab(QWidget):
         if self.close_case_rb.isChecked():
             reason = self.close_reason.toPlainText()
             if reason:
-                final_text.append(f"Reason: {reason}")
+                final_text.append(f"{reason}")
             info = self.close_info.toPlainText()
             if info:
                 final_text.append(f"{info}")
@@ -223,7 +222,7 @@ class CaseBuilderTab(QWidget):
                 final_text.append(f"{crux}")
             info = self.escalation_info.toPlainText()
             if info:
-                final_text.append(f"{info}")
+                final_text.append(f"{info}\n")
 
         # Append other fields
         for i in range(self.common_fields_layout.rowCount()):
@@ -238,17 +237,27 @@ class CaseBuilderTab(QWidget):
                         if isinstance(widget, QLineEdit):
                             text = widget.text()
                             if text:  # Only include non-empty fields
-                                if label == "IP:":
+                                if label == "IP:" and self.settings_tab.settings_abuse_api_key.text():
                                     abuse_info = get_abuse_info(text, self.settings_tab.settings_abuse_api_key.text())
                                     final_text.append(f"{label} {text} - {abuse_info}")
                                 elif label == "Domain:":
                                     domain_info = get_domain_info(text)
                                     final_text.append(f"{label} {text} - {domain_info}")
-                                elif label == "Hash:":
+                                elif label == "Hash:" and self.settings_tab.settings_vt_api_key.text():
                                     hash_info = get_hash_info(text, self.settings_tab.settings_vt_api_key.text())
                                     final_text.append(f"{label} {text} - {hash_info}")
+                                elif label == "URL:" and self.settings_tab.settings_urlscan_api_key.text():
+                                    urlinfo = get_url_info(text, self.settings_tab.settings_urlscan_api_key.text())
+                                    final_text.append(f"{label} {text} - {urlinfo}")
                                 else:
                                     final_text.append(f"{label} {text}")
+
+        # Append custom entities
+        for name_edit, value_edit, _ in self.custom_entities:
+            name = name_edit.text()
+            value = value_edit.text()
+            if name and value:
+                final_text.append(f"{name}: {value}")
 
         # Append sign-off information at the bottom
         if self.escalation_rb.isChecked():
