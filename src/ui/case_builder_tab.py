@@ -4,7 +4,8 @@ from PyQt6.QtWidgets import (
     QTextEdit, QComboBox, QHBoxLayout
 )
 import csv
-from src.utils.api_requests import get_abuse_info, get_domain_info, get_hash_info, get_url_info
+from utils.api_requests import get_abuse_info, get_domain_info, get_hash_info, get_url_info
+
 class CaseBuilderTab(QWidget):
     def __init__(self, settings_tab):
         super().__init__()
