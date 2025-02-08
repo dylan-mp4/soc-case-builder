@@ -7,3 +7,5 @@ src/utils/__pycache__
 src/logs
 .vscode/launch.json
 src/resources/__pycache__
+build/
+dist/
