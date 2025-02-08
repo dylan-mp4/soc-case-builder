@@ -19,7 +19,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.12.6'
 
     - name: Install dependencies
       run: |
@@ -32,7 +32,7 @@ jobs:
         pyinstaller soc_case_builder.spec
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: soc_case_builder
         path: dist/soc_case_builder.exe
