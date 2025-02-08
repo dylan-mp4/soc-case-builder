@@ -5,10 +5,16 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QGuiApplication, QAction
 from .case_builder_tab import CaseBuilderTab
 from .settings_tab import SettingsTab
+from .getting_started import GettingStarted
 
 class CaseBuilderWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.settings_tab = SettingsTab()
+        # self.init_ui()
+        if self.settings_tab.load_settings():
+            self.show_getting_started()
+
         self.setWindowTitle("SOC Case Builder")
 
         # Get screen dimensions
@@ -26,6 +32,10 @@ class CaseBuilderWindow(QMainWindow):
         self.case_builder_tab = CaseBuilderTab(self.settings_tab)
 
         self.central_widget.addTab(self.case_builder_tab, "Case 1")
+
+    def show_getting_started(self):
+        dialog = GettingStarted()
+        dialog.exec()
 
     def closeEvent(self, event):
         print("Main window closing event triggered.")  # Debug print
@@ -79,7 +89,8 @@ class CaseBuilderWindow(QMainWindow):
             self.remove_case_tab()
 
     def handle_tab_double_click(self, index):
-        if index != -1:
+        event = QGuiApplication.mouseButtons()
+        if index != -1 and event == Qt.MouseButton.LeftButton:
             current_tab_name = self.central_widget.tabText(index)
             new_tab_name, ok = QInputDialog.getText(self, "Rename Case Tab", "Enter new name:", text=current_tab_name)
             if ok and new_tab_name:
@@ -88,6 +99,7 @@ class CaseBuilderWindow(QMainWindow):
     def open_settings_dialog(self):
         dialog = QDialog(self)
         dialog.setWindowTitle("Settings")
+        dialog.setFixedWidth(800)  # Set the fixed width of the dialog to 800px
         layout = QVBoxLayout()
 
         # Create a new form layout and add copies of the widgets from settings_form_layout
@@ -119,6 +131,8 @@ class CaseBuilderWindow(QMainWindow):
         self.settings_tab.settings_sign_off_org.setText(new_fields["Sign off (Org):"].text())
         self.settings_tab.settings_abuse_api_key.setText(new_fields["AbuseIPDB API Key:"].text())
         self.settings_tab.settings_vt_api_key.setText(new_fields["VirusTotal API Key:"].text())
+        self.settings_tab.settings_urlscan_api_key.setText(new_fields["URLScan API Key:"].text())
+        self.settings_tab.settings_urlscan_wait_time.setText(new_fields["URLScan wait time (0-100s):"].text())
         self.settings_tab.save_settings()
 
     def save_case(self):
