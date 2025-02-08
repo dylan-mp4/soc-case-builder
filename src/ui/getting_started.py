@@ -15,7 +15,7 @@ class GettingStarted(QDialog):
                             "- VirusTotal: Retrieve your API key from https://www.virustotal.com\n"
                             "- URLScan: Retrieve your API key from https://urlscan.io/user/\n\n"
                             "Please go to the Settings tab to enter your API keys and other information."
-                            "\n\n Created by Dylan Bowles")
+                            "\n\n Created by dylan-mp4")
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
         
