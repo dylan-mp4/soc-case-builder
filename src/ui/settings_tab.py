@@ -1,5 +1,6 @@
 import json
-from PyQt6.QtWidgets import QWidget, QFormLayout, QLineEdit, QPushButton, QLabel
+import csv
+from PyQt6.QtWidgets import QWidget, QFormLayout, QLineEdit, QPushButton, QLabel, QTextEdit, QMessageBox
 from PyQt6.QtGui import QIntValidator
 
 class SettingsTab(QWidget):
@@ -30,10 +31,16 @@ class SettingsTab(QWidget):
         self.save_settings_button.clicked.connect(self.save_settings)
         self.settings_form_layout.addRow(self.save_settings_button)
 
+        # Add clients section
+        self.settings_form_layout.addRow(QLabel("<h3>Clients</h3>"))
+        self.clients_text_edit = QTextEdit()
+        self.settings_form_layout.addRow(self.clients_text_edit)
+
         self.setLayout(self.settings_form_layout)
 
-        # Load settings when the settings tab is initialized
+        # Load settings and clients when the settings tab is initialized
         self.load_settings()
+        self.load_clients()
 
     def save_settings(self):
         settings = {
@@ -47,6 +54,8 @@ class SettingsTab(QWidget):
         }
         with open("settings.json", "w") as f:
             json.dump(settings, f)
+        
+        self.save_clients()
 
     def load_settings(self):
         try:
@@ -61,3 +70,20 @@ class SettingsTab(QWidget):
                 return settings.get("first_time", True)
         except FileNotFoundError:
             return True
+
+    def load_clients(self):
+        try:
+            with open('clients.csv', 'r') as csvfile:
+                reader = csv.reader(csvfile)
+                clients = "\n".join([",".join(row) for row in reader])
+                self.clients_text_edit.setPlainText(clients)
+        except FileNotFoundError:
+            self.clients_text_edit.setPlainText("")
+
+    def save_clients(self):
+        clients_text = self.clients_text_edit.toPlainText()
+        clients = [row.split(",") for row in clients_text.split("\n") if row]
+        with open('clients.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerows(clients)
+        QMessageBox.information(self, "Success", "Settings and clients saved successfully!")

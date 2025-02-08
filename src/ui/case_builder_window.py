@@ -1,19 +1,17 @@
 import os
 from datetime import datetime
-from PyQt6.QtWidgets import QMainWindow, QTabWidget, QApplication, QInputDialog, QMessageBox, QDialog, QVBoxLayout, QFormLayout, QLineEdit, QPushButton
+from PyQt6.QtWidgets import QMainWindow, QTabWidget, QApplication, QInputDialog, QDialog, QVBoxLayout, QFormLayout, QLineEdit, QPushButton, QTextEdit, QLabel
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QGuiApplication, QAction
-from .case_builder_tab import CaseBuilderTab
-from .settings_tab import SettingsTab
-from .getting_started import GettingStarted
 from resources.version import __version__
-
+from ui.case_builder_tab import CaseBuilderTab
+from ui.settings_tab import SettingsTab
+from ui.getting_started import GettingStarted
 
 class CaseBuilderWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.settings_tab = SettingsTab()
-        # self.init_ui()
         if self.settings_tab.load_settings():
             self.show_getting_started()
 
@@ -29,10 +27,7 @@ class CaseBuilderWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
         
         self.create_menu()
-
-        self.settings_tab = SettingsTab()
         self.case_builder_tab = CaseBuilderTab(self.settings_tab)
-
         self.central_widget.addTab(self.case_builder_tab, "Case 1")
 
     def show_getting_started(self):
@@ -119,6 +114,13 @@ class CaseBuilderWindow(QMainWindow):
                     form_layout.addRow(label, new_field)
                     new_fields[label] = new_field
 
+        # Add the clients text edit
+        clients_label = QLabel("Clients:")
+        clients_text_edit = QTextEdit()
+        clients_text_edit.setPlainText(self.settings_tab.clients_text_edit.toPlainText())
+        form_layout.addRow(clients_label, clients_text_edit)
+        new_fields["clients_text_edit"] = clients_text_edit
+
         # Add the save settings button
         save_button = QPushButton("Save Settings")
         save_button.clicked.connect(lambda: self.save_settings_from_dialog(new_fields))
@@ -135,6 +137,7 @@ class CaseBuilderWindow(QMainWindow):
         self.settings_tab.settings_vt_api_key.setText(new_fields["VirusTotal API Key:"].text())
         self.settings_tab.settings_urlscan_api_key.setText(new_fields["URLScan API Key:"].text())
         self.settings_tab.settings_urlscan_wait_time.setText(new_fields["URLScan wait time (0-100s):"].text())
+        self.settings_tab.clients_text_edit.setPlainText(new_fields["clients_text_edit"].toPlainText())
         self.settings_tab.save_settings()
 
     def save_case(self):
