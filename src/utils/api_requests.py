@@ -1,5 +1,6 @@
 import requests
-
+import time
+import json
 
 def get_domain_info(domain):
     url = f'https://networkcalc.com/api/dns/lookup/{domain}'
@@ -76,3 +77,44 @@ def get_hash_info(hash_value, api_key):
         return hash_info if hash_info else "No information found"
     else:
         return f"Error fetching data: {response.status_code} - {response.reason}"
+
+def get_url_info(url, api_key):
+    headers = {'API-Key': api_key, 'Content-Type': 'application/json'}
+    data = {'url': url}
+    response = requests.post('https://urlscan.io/api/v1/scan/', headers=headers, json=data)
+    if response.status_code == 200:
+        decoded_response = response.json()
+        resulturl = decoded_response.get('api', 'N/A')
+        # Wait for the scan to complete
+        wait_time = get_wait_time()
+        time.sleep(wait_time)
+        # Get the scan results
+        response = requests.get(resulturl, headers=headers)
+        if response.status_code == 200:
+            decoded_response = response.json()
+            verdicts = decoded_response.get('verdicts', {})
+            if verdicts:
+                return ', '.join([f"{key}: {value}" for key, value in verdicts.items()])
+            else:
+                return "No verdicts found"
+        else:
+            time.sleep(wait_time)
+            response = requests.get(resulturl, headers=headers)
+            if response.status_code == 200:
+                decoded_response = response.json()
+                verdicts = decoded_response.get('verdicts', {})
+                if verdicts:
+                    return ', '.join([f"{key}: {value}" for key, value in verdicts.items()])
+                else:
+                    return "No verdicts found"
+            return f"Error fetching data: {response.status_code} - {response.reason}"
+    else:
+        return f"Error fetching data: {response.status_code} - {response.reason}"
+    
+def get_wait_time():
+    try:
+        with open('settings.json', 'r') as f:
+            settings = json.load(f)
+            return int(settings.get('urlscan_wait_time', 5))
+    except (FileNotFoundError, json.JSONDecodeError, ValueError):
+        return 5
