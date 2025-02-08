@@ -6,6 +6,8 @@ from PyQt6.QtGui import QGuiApplication, QAction
 from .case_builder_tab import CaseBuilderTab
 from .settings_tab import SettingsTab
 from .getting_started import GettingStarted
+from resources.version import __version__
+
 
 class CaseBuilderWindow(QMainWindow):
     def __init__(self):
@@ -15,7 +17,7 @@ class CaseBuilderWindow(QMainWindow):
         if self.settings_tab.load_settings():
             self.show_getting_started()
 
-        self.setWindowTitle("SOC Case Builder")
+        self.setWindowTitle(f"SOC Case Builder v{__version__}")
 
         # Get screen dimensions
         screen = QGuiApplication.primaryScreen().geometry()

@@ -6,3 +6,4 @@ src/__pycache__
 src/utils/__pycache__
 src/logs
 .vscode/launch.json
+src/resources/__pycache__
