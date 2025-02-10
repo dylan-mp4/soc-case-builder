@@ -3,8 +3,19 @@ from PyQt6.QtWidgets import (
     QLineEdit, QPushButton, QRadioButton, QButtonGroup,
     QTextEdit, QComboBox, QHBoxLayout
 )
+from PyQt6.QtGui import QGuiApplication, QClipboard
 import csv
 from utils.api_requests import get_abuse_info, get_domain_info, get_hash_info, get_url_info
+
+class PlainTextLineEdit(QLineEdit):
+    def insertFromMimeData(self, source):
+        plain_text = source.text()
+        self.insert(plain_text)
+
+class PlainTextTextEdit(QTextEdit):
+    def insertFromMimeData(self, source):
+        plain_text = source.text()
+        self.insertPlainText(plain_text)
 
 class CaseBuilderTab(QWidget):
     def __init__(self, settings_tab):
@@ -60,10 +71,10 @@ class CaseBuilderTab(QWidget):
         except FileNotFoundError:
             pass
 
-        self.crux_field = QLineEdit()
-        self.escalation_info = QTextEdit()
-        self.sign_off_user = QLineEdit()
-        self.sign_off_org = QLineEdit()
+        self.crux_field = PlainTextLineEdit()
+        self.escalation_info = PlainTextTextEdit()
+        self.sign_off_user = PlainTextLineEdit()
+        self.sign_off_org = PlainTextLineEdit()
 
         self.escalation_layout.addRow("Client:", self.client_combo)
         self.escalation_layout.addRow("Crux:", self.crux_field)
@@ -72,8 +83,8 @@ class CaseBuilderTab(QWidget):
         # self.escalation_layout.addRow("Sign off (User):", self.sign_off_user)
         # self.escalation_layout.addRow("Sign off (Org):", self.sign_off_org)
 
-        self.close_reason = QTextEdit()
-        self.close_info = QTextEdit()
+        self.close_reason = PlainTextTextEdit()
+        self.close_info = PlainTextTextEdit()
         self.close_layout.addRow("Reason:", self.close_reason)
         self.close_layout.addRow("Information:", self.close_info)
 
@@ -89,7 +100,7 @@ class CaseBuilderTab(QWidget):
         self.clear_button.clicked.connect(self.clear_fields)
         self.case_builder_layout.addWidget(self.clear_button)
 
-        self.output_text = QTextEdit()
+        self.output_text = PlainTextTextEdit()
         self.case_builder_layout.addWidget(self.output_text)
 
         # Show relevant fields by default (close case)
@@ -118,7 +129,7 @@ class CaseBuilderTab(QWidget):
 
     def add_field_with_button(self, label, layout):
         field_layout = QHBoxLayout()
-        line_edit = QLineEdit()
+        line_edit = PlainTextLineEdit()
         add_button = QPushButton("+")
         add_button.setMaximumWidth(20)
         add_button.clicked.connect(lambda: self.add_field_with_button(label, layout))
@@ -142,8 +153,8 @@ class CaseBuilderTab(QWidget):
 
     def add_custom_entity(self):
         field_layout = QHBoxLayout()
-        name_edit = QLineEdit()
-        value_edit = QLineEdit()
+        name_edit = PlainTextLineEdit()
+        value_edit = PlainTextLineEdit()
         add_button = QPushButton("+")
         add_button.setMaximumWidth(20)
         add_button.clicked.connect(lambda: self.add_custom_entity())
