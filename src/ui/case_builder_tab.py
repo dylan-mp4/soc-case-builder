@@ -1,18 +1,17 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QFormLayout, QScrollArea, QTabWidget,
-    QLineEdit, QPushButton, QRadioButton, QButtonGroup,
-    QTextEdit, QComboBox, QHBoxLayout
+    QWidget, QVBoxLayout, QFormLayout, QScrollArea, QLineEdit, QPushButton, 
+    QRadioButton, QButtonGroup, QComboBox, QHBoxLayout
 )
-from PyQt6.QtGui import QGuiApplication, QClipboard
 import csv
 from utils.api_requests import get_abuse_info, get_domain_info, get_hash_info, get_url_info
+from utils.spell_check import SpellTextEdit
 
 class PlainTextLineEdit(QLineEdit):
     def insertFromMimeData(self, source):
         plain_text = source.text()
         self.insert(plain_text)
 
-class PlainTextTextEdit(QTextEdit):
+class PlainTextTextEdit(SpellTextEdit):
     def insertFromMimeData(self, source):
         plain_text = source.text()
         self.insertPlainText(plain_text)
