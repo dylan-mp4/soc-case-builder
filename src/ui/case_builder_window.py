@@ -148,14 +148,15 @@ class CaseBuilderWindow(QMainWindow):
                 compiled_info = current_tab.output_text.toPlainText()
                 if compiled_info.strip():  # Check if there is any information
                     case_name = self.central_widget.tabText(current_index)
+                    sanitized_case_name = case_name.replace(".", "_")  # Replace periods with underscores
                     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                    filename = f"{case_name}_{timestamp}.txt"
+                    filename = f"{sanitized_case_name}_{timestamp}.txt"
                     logs_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
                     os.makedirs(logs_dir, exist_ok=True)
                     filepath = os.path.join(logs_dir, filename)
                     with open(filepath, "w") as file:
                         file.write(compiled_info)
-
+                        
 if __name__ == "__main__":
     import sys
     app = QApplication(sys.argv)
