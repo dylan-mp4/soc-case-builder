@@ -21,7 +21,7 @@ a = Analysis(
         'PyQt6.sip',
         'requests',
         'urllib3',
-        'altgraph'
+        'altgraph',
         'packaging',
         'pefile',
         'pyenchant',
