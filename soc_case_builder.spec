@@ -20,7 +20,13 @@ a = Analysis(
         'PyQt6.Qt6',
         'PyQt6.sip',
         'requests',
-        'urllib3'
+        'urllib3',
+        'altgraph'
+        'packaging',
+        'pefile',
+        'pyenchant',
+        'pywin32-ctypes',
+        'setuptools'
     ],
     hookspath=[],
     runtime_hooks=[],

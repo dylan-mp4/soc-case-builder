@@ -1,8 +1,16 @@
+altgraph==0.17.4
 certifi==2025.1.31
 charset-normalizer==3.4.1
 idna==3.10
+packaging==24.2
+pefile==2023.2.7
+pyenchant==3.2.2
+pyinstaller==6.11.1
+pyinstaller-hooks-contrib==2025.1
 PyQt6==6.8.1
 PyQt6-Qt6==6.8.2
 PyQt6_sip==13.10.0
+pywin32-ctypes==0.2.3
 requests==2.32.3
+setuptools==75.8.0
 urllib3==2.3.0
