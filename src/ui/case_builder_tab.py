@@ -33,6 +33,7 @@ class CaseBuilderTab(QWidget):
 
         self.add_field_with_button("Username:", self.common_fields_layout)
         self.add_field_with_button("Role:", self.common_fields_layout)
+        self.add_field_with_button("Location:", self.common_fields_layout)
         self.add_field_with_button("Host:", self.common_fields_layout)
         self.add_field_with_button("IP:", self.common_fields_layout)
         self.add_field_with_button("Domain:", self.common_fields_layout)
@@ -191,6 +192,7 @@ class CaseBuilderTab(QWidget):
         self.entity_positions.clear()
         self.add_field_with_button("Username:", self.common_fields_layout)
         self.add_field_with_button("Role:", self.common_fields_layout)
+        self.add_field_with_button("Location:", self.common_fields_layout)
         self.add_field_with_button("Host:", self.common_fields_layout)
         self.add_field_with_button("IP:", self.common_fields_layout)
         self.add_field_with_button("Domain:", self.common_fields_layout)
@@ -213,7 +215,9 @@ class CaseBuilderTab(QWidget):
 
     def compile_case(self):
         final_text = []
-        
+        other_fields_text = []
+        custom_entities_text = []
+
         # Append client information at the top
         if self.escalation_rb.isChecked():
             client = self.client_combo.currentText()
@@ -223,14 +227,14 @@ class CaseBuilderTab(QWidget):
         if self.close_case_rb.isChecked():
             reason = self.close_reason.toPlainText()
             if reason:
-                final_text.append(f"{reason}")
+                final_text.append(f"{reason}\n")
             info = self.close_info.toPlainText()
             if info:
-                final_text.append(f"{info}")
+                final_text.append(f"{info}\n")
         else:
             crux = self.crux_field.text()
             if crux:
-                final_text.append(f"{crux}")
+                final_text.append(f"{crux}\n")
             info = self.escalation_info.toPlainText()
             if info:
                 final_text.append(f"{info}\n")
@@ -250,16 +254,16 @@ class CaseBuilderTab(QWidget):
                             if text:  # Only include non-empty fields
                                 if label == "IP:" and self.settings_tab.settings_abuse_api_key.text():
                                     abuse_info = get_abuse_info(text, self.settings_tab.settings_abuse_api_key.text())
-                                    final_text.append(f"{label} {text} - {abuse_info}")
+                                    other_fields_text.append(f"\n{label} {text} - {abuse_info}")
                                 elif label == "Domain:":
                                     domain_info = get_domain_info(text)
-                                    final_text.append(f"{label} {text} - {domain_info}")
+                                    other_fields_text.append(f"\n{label} {text} - {domain_info}")
                                 elif label == "Hash:" and self.settings_tab.settings_vt_api_key.text():
                                     hash_info = get_hash_info(text, self.settings_tab.settings_vt_api_key.text())
-                                    final_text.append(f"{label} {text} - {hash_info}")
+                                    other_fields_text.append(f"\n{label} {text} - {hash_info}")
                                 elif label == "URL:" and self.settings_tab.settings_urlscan_api_key.text():
                                     urlinfo = get_url_info(text, self.settings_tab.settings_urlscan_api_key.text())
-                                    final_text.append(f"{label} {text} - {urlinfo}")
+                                    other_fields_text.append(f"\n{label} {text} - {urlinfo}")
                                 else:
                                     final_text.append(f"{label} {text}")
 
@@ -268,7 +272,13 @@ class CaseBuilderTab(QWidget):
             name = name_edit.text()
             value = value_edit.text()
             if name and value:
-                final_text.append(f"{name}: {value}")
+                custom_entities_text.append(f"{name}: {value}")
+
+        # Append custom entities text
+        final_text.extend(custom_entities_text)
+
+        # Append other fields text
+        final_text.extend(other_fields_text)
 
         # Append sign-off information at the bottom
         if self.escalation_rb.isChecked():
