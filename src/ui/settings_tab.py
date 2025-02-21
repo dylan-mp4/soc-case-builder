@@ -18,12 +18,8 @@ class SettingsTab(QWidget):
         self.settings_urlscan_wait_time.setValidator(QIntValidator(0, 100))
         self.settings_form_layout.addRow("Sign off (User):", self.settings_sign_off_user)
         self.settings_form_layout.addRow("Sign off (Org):", self.settings_sign_off_org)
-        self.settings_form_layout.addRow(QLabel('Please read the API documentation for the following services especially urlscan by default scans are public and could reveal PII'), QLabel())
-        self.settings_form_layout.addRow(QLabel('Retrieve API Key for AbuseIPDB from <a href="https://www.abuseipdb.com/account">here</a>'), QLabel())
         self.settings_form_layout.addRow("AbuseIPDB API Key:", self.settings_abuse_api_key)
-        self.settings_form_layout.addRow(QLabel('Retrieve API Key for VirusTotal from <a href="https://www.virustotal.com">here</a>'), QLabel())
         self.settings_form_layout.addRow("VirusTotal API Key:", self.settings_vt_api_key)
-        self.settings_form_layout.addRow(QLabel('Retrieve API Key for URLScan from <a href="https://urlscan.io/user/">here</a> - Note: URLScan can add a delay to the scan'), QLabel())
         self.settings_form_layout.addRow("URLScan API Key:", self.settings_urlscan_api_key)
         self.settings_form_layout.addRow("URLScan wait time (0-100s):", self.settings_urlscan_wait_time)
 
