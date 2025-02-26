@@ -45,27 +45,41 @@ class CaseBuilderWindow(QMainWindow):
         file_menu = menubar.addMenu('File')
 
         new_case_action = QAction('New Case', self)
+        new_case_action.setShortcut('Ctrl+T')
         new_case_action.triggered.connect(self.add_new_case_tab)
         file_menu.addAction(new_case_action)
+
         save_case_action = QAction('Save Case', self)
+        save_case_action.setShortcut('Ctrl+S')
         save_case_action.triggered.connect(self.save_case)
         file_menu.addAction(save_case_action)
 
         load_case_action = QAction('Load Case', self)
+        load_case_action.setShortcut('Ctrl+P')
         load_case_action.triggered.connect(self.load_case)
         file_menu.addAction(load_case_action)
 
         rename_case_action = QAction('Rename Case', self)
+        rename_case_action.setShortcut('Ctrl+R')
         rename_case_action.triggered.connect(self.rename_case_tab)
         file_menu.addAction(rename_case_action)
 
         remove_case_action = QAction('Remove Case', self)
+        remove_case_action.setShortcut('Ctrl+W')
         remove_case_action.triggered.connect(self.remove_case_tab)
         file_menu.addAction(remove_case_action)
 
         settings_action = QAction('Settings', self)
         settings_action.triggered.connect(self.open_settings_dialog)
-        menubar.addAction(settings_action)
+        menubar.addAction(settings_action)        
+        
+        GettingStarted_action = QAction('Getting Started', self)
+        GettingStarted_action.triggered.connect(self.open_getting_started)
+        menubar.addAction(GettingStarted_action)
+
+    def open_getting_started(self):
+        dialog = GettingStarted()
+        dialog.exec()
 
     def add_new_case_tab(self):
         new_tab = CaseBuilderTab(self.settings_tab)
