@@ -222,7 +222,7 @@ class CaseBuilderTab(QWidget):
         if self.escalation_rb.isChecked():
             client = self.client_combo.currentText()
             if client:
-                final_text.append(f"Dear {client},")
+                final_text.append(f"Dear {client},\n")
 
         if self.close_case_rb.isChecked():
             reason = self.close_reason.toPlainText()
@@ -284,7 +284,7 @@ class CaseBuilderTab(QWidget):
         if self.escalation_rb.isChecked():
             sign_off_user = self.settings_tab.settings_sign_off_user.text()
             if sign_off_user:
-                final_text.append(f"Kind Regards,\n{sign_off_user},")
+                final_text.append(f"\nKind Regards,\n{sign_off_user},")
             sign_off_org = self.settings_tab.settings_sign_off_org.text()
             if sign_off_org:
                 final_text.append(f"{sign_off_org}")
