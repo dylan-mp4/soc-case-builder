@@ -15,9 +15,8 @@ class PlainTextTextEdit(SpellTextEdit):
     def insertFromMimeData(self, source):
         plain_text = source.text()
         self.insertPlainText(plain_text)
-
 class CaseBuilderTab(QWidget):
-    def __init__(self, settings_tab):
+    def __init__(self, settings_tab, initial_fields=None):
         super().__init__()
         self.settings_tab = settings_tab
         self.case_builder_layout = QVBoxLayout(self)
@@ -31,14 +30,17 @@ class CaseBuilderTab(QWidget):
         self.entity_positions = {}
         self.custom_entities = []
 
-        self.add_field_with_button("Username:", self.common_fields_layout)
-        self.add_field_with_button("Role:", self.common_fields_layout)
-        self.add_field_with_button("Location:", self.common_fields_layout)
-        self.add_field_with_button("Host:", self.common_fields_layout)
-        self.add_field_with_button("IP:", self.common_fields_layout)
-        self.add_field_with_button("Domain:", self.common_fields_layout)
-        self.add_field_with_button("Hash:", self.common_fields_layout)
-        self.add_field_with_button("URL:", self.common_fields_layout)
+        if initial_fields:
+            for field in initial_fields:
+                self.add_field(field["label"], self.common_fields_layout)
+                field_position = self.entity_positions.get(field["label"])
+                if field_position is not None:
+                    field_widget = self.common_fields_layout.itemAt(field_position, QFormLayout.ItemRole.FieldRole).layout().itemAt(0).widget()
+                    if field_widget:
+                        field_widget.setText(field["value"])
+        else:
+            self.generate_default_fields()
+
         self.scroll_layout.addLayout(self.common_fields_layout)
 
         self.add_custom_entity_button = QPushButton("Add Custom Entity")
@@ -127,14 +129,18 @@ class CaseBuilderTab(QWidget):
                 widget_label.widget().setVisible(not is_escalation)
                 widget_field.widget().setVisible(not is_escalation)
 
-    def add_field_with_button(self, label, layout):
+    def add_field(self, label, layout):
         field_layout = QHBoxLayout()
         line_edit = PlainTextLineEdit()
         add_button = QPushButton("+")
         add_button.setMaximumWidth(20)
-        add_button.clicked.connect(lambda: self.add_field_with_button(label, layout))
+        add_button.clicked.connect(lambda: self.add_field(label, layout))
+        remove_button = QPushButton("x")
+        remove_button.setMaximumWidth(20)
+        remove_button.clicked.connect(lambda: self.remove_field(label, layout, field_layout))
         field_layout.addWidget(line_edit)
         field_layout.addWidget(add_button)
+        field_layout.addWidget(remove_button)
 
         if label not in self.entity_positions:
             self.entity_positions[label] = layout.rowCount()
@@ -144,6 +150,25 @@ class CaseBuilderTab(QWidget):
         layout.insertRow(self.entity_positions[label], label, field_layout)
         self.update_entity_positions()
 
+    def remove_field(self, label, layout, field_layout):
+        for i in range(layout.rowCount()):
+            label_item = layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
+            field_item = layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
+            if field_item and field_item.layout() == field_layout:
+                layout.removeRow(i)
+                break
+        self.update_entity_positions()
+
+    def generate_default_fields(self):
+        self.add_field("Username:", self.common_fields_layout)
+        self.add_field("Role:", self.common_fields_layout)
+        self.add_field("Location:", self.common_fields_layout)
+        self.add_field("Host:", self.common_fields_layout)
+        self.add_field("IP:", self.common_fields_layout)
+        self.add_field("Domain:", self.common_fields_layout)
+        self.add_field("Hash:", self.common_fields_layout)
+        self.add_field("URL:", self.common_fields_layout)
+    
     def update_entity_positions(self):
         for i in range(self.common_fields_layout.rowCount()):
             label_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
@@ -190,14 +215,7 @@ class CaseBuilderTab(QWidget):
 
         # Re-add the default fields
         self.entity_positions.clear()
-        self.add_field_with_button("Username:", self.common_fields_layout)
-        self.add_field_with_button("Role:", self.common_fields_layout)
-        self.add_field_with_button("Location:", self.common_fields_layout)
-        self.add_field_with_button("Host:", self.common_fields_layout)
-        self.add_field_with_button("IP:", self.common_fields_layout)
-        self.add_field_with_button("Domain:", self.common_fields_layout)
-        self.add_field_with_button("Hash:", self.common_fields_layout)
-        self.add_field_with_button("URL:", self.common_fields_layout)
+        self.generate_default_fields()
         self.common_fields_layout.addRow(self.add_custom_entity_button)
 
         self.client_combo.setCurrentIndex(0)
