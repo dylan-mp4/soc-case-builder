@@ -45,7 +45,7 @@ jobs:
 
     - name: Get version
       id: get_version
-      run: echo "VERSION=$(python get_version.py)" >> $GITHUB_ENV
+      run: echo "VERSION=$(python src/resources/get_version.py)" >> $GITHUB_ENV
 
     - name: Build executable with PyInstaller
       run: |
