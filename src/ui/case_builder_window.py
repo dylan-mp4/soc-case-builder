@@ -6,14 +6,14 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QGuiApplication, QAction
 from resources.version import __version__
 from ui.case_builder_tab import CaseBuilderTab
-from ui.settings_tab import SettingsTab
+from src.ui.settings_dialog import SettingsDialog
 from ui.getting_started import GettingStarted
 
 class CaseBuilderWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.settings_tab = SettingsTab()
-        if self.settings_tab.load_settings():
+        self.settings_dialog = SettingsDialog()
+        if self.settings_dialog.load_settings():
             self.show_getting_started()
 
         self.setWindowTitle(f"SOC Case Builder v{__version__}")
@@ -28,7 +28,7 @@ class CaseBuilderWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
         
         self.create_menu()
-        self.case_builder_tab = CaseBuilderTab(self.settings_tab)
+        self.case_builder_tab = CaseBuilderTab(self.settings_dialog)
         self.central_widget.addTab(self.case_builder_tab, "Case 1")
 
     def show_getting_started(self):
@@ -37,7 +37,6 @@ class CaseBuilderWindow(QMainWindow):
 
     def closeEvent(self, event):
         print("Main window closing event triggered.")  # Debug print
-        self.settings_tab.closeEvent(event)
         event.accept()
         
     def create_menu(self):
@@ -73,16 +72,20 @@ class CaseBuilderWindow(QMainWindow):
         settings_action.triggered.connect(self.open_settings_dialog)
         menubar.addAction(settings_action)        
         
-        GettingStarted_action = QAction('Getting Started', self)
-        GettingStarted_action.triggered.connect(self.open_getting_started)
-        menubar.addAction(GettingStarted_action)
+        getting_started_action = QAction('Getting Started', self)
+        getting_started_action.triggered.connect(self.open_getting_started)
+        menubar.addAction(getting_started_action)
 
     def open_getting_started(self):
         dialog = GettingStarted()
         dialog.exec()
 
+    def open_settings_dialog(self):
+        self.settings_dialog.load_settings()  # Reload settings before showing the dialog
+        self.settings_dialog.exec()
+
     def add_new_case_tab(self):
-        new_tab = CaseBuilderTab(self.settings_tab)
+        new_tab = CaseBuilderTab(self.settings_dialog)
         self.central_widget.addTab(new_tab, f"Case {self.central_widget.count() + 1}")
 
     def rename_case_tab(self):
@@ -111,53 +114,6 @@ class CaseBuilderWindow(QMainWindow):
             new_tab_name, ok = QInputDialog.getText(self, "Rename Case Tab", "Enter new name:", text=current_tab_name)
             if ok and new_tab_name:
                 self.central_widget.setTabText(index, new_tab_name)
-
-    def open_settings_dialog(self):
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Settings")
-        dialog.setFixedWidth(800)  # Set the fixed width of the dialog to 800px
-        layout = QVBoxLayout()
-
-        # Create a new form layout and add copies of the widgets from settings_form_layout
-        form_layout = QFormLayout()
-        new_fields = {}
-        for i in range(self.settings_tab.settings_form_layout.rowCount()):
-            label_item = self.settings_tab.settings_form_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
-            field_item = self.settings_tab.settings_form_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
-            if label_item and field_item:
-                label = label_item.widget().text()
-                field = field_item.widget()
-                if isinstance(field, QLineEdit):
-                    new_field = QLineEdit()
-                    new_field.setText(field.text())
-                    form_layout.addRow(label, new_field)
-                    new_fields[label] = new_field
-
-        # Add the clients text edit
-        clients_label = QLabel("Clients:")
-        clients_text_edit = QTextEdit()
-        clients_text_edit.setPlainText(self.settings_tab.clients_text_edit.toPlainText())
-        form_layout.addRow(clients_label, clients_text_edit)
-        new_fields["clients_text_edit"] = clients_text_edit
-
-        # Add the save settings button
-        save_button = QPushButton("Save Settings")
-        save_button.clicked.connect(lambda: self.save_settings_from_dialog(new_fields))
-        form_layout.addRow(save_button)
-
-        layout.addLayout(form_layout)
-        dialog.setLayout(layout)
-        dialog.exec()
-
-    def save_settings_from_dialog(self, new_fields):
-        self.settings_tab.settings_sign_off_user.setText(new_fields["Sign off (User):"].text())
-        self.settings_tab.settings_sign_off_org.setText(new_fields["Sign off (Org):"].text())
-        self.settings_tab.settings_abuse_api_key.setText(new_fields["AbuseIPDB API Key:"].text())
-        self.settings_tab.settings_vt_api_key.setText(new_fields["VirusTotal API Key:"].text())
-        self.settings_tab.settings_urlscan_api_key.setText(new_fields["URLScan API Key:"].text())
-        self.settings_tab.settings_urlscan_wait_time.setText(new_fields["URLScan wait time (0-100s):"].text())
-        self.settings_tab.clients_text_edit.setPlainText(new_fields["clients_text_edit"].toPlainText())
-        self.settings_tab.save_settings()
 
     def save_case(self):
         current_index = self.central_widget.currentIndex()
@@ -214,7 +170,7 @@ class CaseBuilderWindow(QMainWindow):
             with open(file_path, "r") as file:
                 case_data = json.load(file)
                 initial_fields = case_data.get("fields", [])
-                new_tab = CaseBuilderTab(self.settings_tab, initial_fields)
+                new_tab = CaseBuilderTab(self.settings_dialog, initial_fields)
                 self.central_widget.addTab(new_tab, case_data["tab_name"])
 
                 # Load custom entities

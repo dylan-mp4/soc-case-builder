@@ -9,3 +9,4 @@ src/logs
 src/resources/__pycache__
 build/
 dist/
+custom_dict.txt

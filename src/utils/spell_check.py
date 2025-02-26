@@ -2,11 +2,17 @@ from PyQt6.QtGui import QSyntaxHighlighter, QTextCharFormat, QColor, QTextCursor
 from PyQt6.QtCore import QRegularExpression, Qt
 from PyQt6.QtWidgets import QTextEdit
 import enchant
+from enchant.checker import SpellChecker
+from enchant.tokenize import EmailFilter, URLFilter
+from src.ui.settings_dialog import SettingsDialog
 
 class SpellHighlighter(QSyntaxHighlighter):
     def __init__(self, parent):
         super().__init__(parent)
-        self.spell_checker = enchant.Dict("en_US")
+        self.settings_dialog = SettingsDialog()
+        self.settings_dialog.load_settings()
+        self.language_region = self.settings_dialog.language_region_combo.currentText()
+        self.spell_checker = enchant.Dict(self.language_region)
         self.misspelled_format = QTextCharFormat()
         self.misspelled_format.setUnderlineColor(QColor("red"))
         self.misspelled_format.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SpellCheckUnderline)
@@ -49,3 +55,5 @@ class SpellTextEdit(QTextEdit):
 
     def add_word_to_dictionary(self, word):
         self.highlighter.spell_checker.add(word)
+        self.highlighter.settings_dialog.custom_dict_list.addItem(word)
+        self.highlighter.settings_dialog.save_custom_dictionary()
