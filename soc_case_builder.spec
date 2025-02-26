@@ -26,7 +26,8 @@ a = Analysis(
         'pefile',
         'pyenchant',
         'pywin32-ctypes',
-        'setuptools'
+        'setuptools',
+        'pyenchant'
     ],
     hookspath=[],
     runtime_hooks=[],
