@@ -160,6 +160,7 @@ class CaseBuilderTab(QWidget):
         self.update_entity_positions()
 
     def generate_default_fields(self):
+        self.add_field("Case Link:", self.common_fields_layout)
         self.add_field("Username:", self.common_fields_layout)
         self.add_field("Role:", self.common_fields_layout)
         self.add_field("Location:", self.common_fields_layout)
