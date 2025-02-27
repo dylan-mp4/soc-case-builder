@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QTextEdit
 import enchant
 from enchant.checker import SpellChecker
 from enchant.tokenize import EmailFilter, URLFilter
-from src.ui.settings_dialog import SettingsDialog
+from ui.settings_dialog import SettingsDialog
 
 class SpellHighlighter(QSyntaxHighlighter):
     def __init__(self, parent):

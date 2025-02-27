@@ -6,7 +6,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QGuiApplication, QAction
 from resources.version import __version__
 from ui.case_builder_tab import CaseBuilderTab
-from src.ui.settings_dialog import SettingsDialog
+from ui.settings_dialog import SettingsDialog
 from ui.getting_started import GettingStarted
 
 class CaseBuilderWindow(QMainWindow):
