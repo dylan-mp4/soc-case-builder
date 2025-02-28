@@ -15,6 +15,7 @@ class PlainTextTextEdit(SpellTextEdit):
     def insertFromMimeData(self, source):
         plain_text = source.text()
         self.insertPlainText(plain_text)
+
 class CaseBuilderTab(QWidget):
     def __init__(self, settings_tab, initial_fields=None):
         super().__init__()
@@ -42,6 +43,18 @@ class CaseBuilderTab(QWidget):
             self.generate_default_fields()
 
         self.scroll_layout.addLayout(self.common_fields_layout)
+
+        # Add dropdown and button for premade entities
+        self.entity_dropdown_layout = QHBoxLayout()
+        self.entity_dropdown = QComboBox()
+        self.entity_dropdown.addItems([
+            "Case Link", "Username", "Role", "Location", "Host", "IP", "Domain", "Hash", "URL"
+        ])
+        self.add_entity_button = QPushButton("Add Entity")
+        self.add_entity_button.clicked.connect(self.add_selected_entity)
+        self.entity_dropdown_layout.addWidget(self.entity_dropdown)
+        self.entity_dropdown_layout.addWidget(self.add_entity_button)
+        self.scroll_layout.addLayout(self.entity_dropdown_layout)
 
         self.add_custom_entity_button = QPushButton("Add Custom Entity")
         self.add_custom_entity_button.clicked.connect(self.add_custom_entity)
@@ -189,6 +202,10 @@ class CaseBuilderTab(QWidget):
         field_layout.addWidget(add_button)
         self.common_fields_layout.insertRow(self.common_fields_layout.rowCount() - 1, "", field_layout)
         self.custom_entities.append((name_edit, value_edit, add_button))
+
+    def add_selected_entity(self):
+        selected_entity = self.entity_dropdown.currentText()
+        self.add_field(f"{selected_entity}:", self.common_fields_layout)
 
     def clear_fields(self):
         # Remove all dynamically added fields

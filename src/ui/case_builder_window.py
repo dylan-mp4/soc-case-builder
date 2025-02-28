@@ -8,6 +8,7 @@ from resources.version import __version__
 from ui.case_builder_tab import CaseBuilderTab
 from ui.settings_dialog import SettingsDialog
 from ui.getting_started import GettingStarted
+from ui.search_cases import SearchCases
 
 class CaseBuilderWindow(QMainWindow):
     def __init__(self):
@@ -70,11 +71,20 @@ class CaseBuilderWindow(QMainWindow):
 
         settings_action = QAction('Settings', self)
         settings_action.triggered.connect(self.open_settings_dialog)
-        menubar.addAction(settings_action)        
+        menubar.addAction(settings_action)
+
+        search_cases_action = QAction('Search Cases', self)
+        search_cases_action.setShortcut('Ctrl+F')
+        search_cases_action.triggered.connect(self.open_search_cases)
+        menubar.addAction(search_cases_action)
         
         getting_started_action = QAction('Getting Started', self)
         getting_started_action.triggered.connect(self.open_getting_started)
         menubar.addAction(getting_started_action)
+
+    def open_search_cases(self):
+        dialog = SearchCases(self)
+        dialog.exec()
 
     def open_getting_started(self):
         dialog = GettingStarted()
@@ -164,10 +174,14 @@ class CaseBuilderWindow(QMainWindow):
                 with open(filepath, "w") as file:
                     json.dump(case_data, file, indent=4)
 
-    def load_case(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Load Case", "", "JSON Files (*.json);;All Files (*)")
+    def load_case(self, file_path=None):
+        if not file_path:
+            file_path, _ = QFileDialog.getOpenFileName(self, "Load Case", "", "JSON Files (*.json);;All Files (*)")
         if file_path:
-            with open(file_path, "r") as file:
+            logs_dir = os.path.join(os.path.dirname(__file__), 'logs')
+            full_file_path = os.path.join(logs_dir, file_path)
+            print(f"Loading case from file: {full_file_path}")  # Debug print
+            with open(full_file_path, "r") as file:
                 case_data = json.load(file)
                 initial_fields = case_data.get("fields", [])
                 new_tab = CaseBuilderTab(self.settings_dialog, initial_fields)
