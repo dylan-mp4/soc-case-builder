@@ -30,7 +30,8 @@ a = Analysis(
         'pyenchant',
         'enchant',
         'enchant.checker',
-        'enchant.tokenize' 
+        'enchant.tokenize',
+        're'
     ],
     hookspath=[],
     runtime_hooks=[],

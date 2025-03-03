@@ -15,14 +15,17 @@ class SettingsDialog(QDialog):
         self.general_tab = QWidget()
         self.api_settings_tab = QWidget()
         self.spellcheck_tab = QWidget()
+        self.entity_settings_tab = QWidget()  # New tab for entity settings
 
         self.init_general_tab()
         self.init_api_settings_tab()
         self.init_spellcheck_tab()
+        self.init_entity_settings_tab()  # Initialize the new tab
 
         self.tab_widget.addTab(self.general_tab, "General")
         self.tab_widget.addTab(self.api_settings_tab, "API Settings")
         self.tab_widget.addTab(self.spellcheck_tab, "Spellcheck")
+        self.tab_widget.addTab(self.entity_settings_tab, "Entity Settings")  # Add new tab to the tab widget
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.tab_widget)
@@ -32,6 +35,7 @@ class SettingsDialog(QDialog):
         self.load_settings()
         self.load_clients()
 
+    # General Tab
     def init_general_tab(self):
         self.general_form_layout = QFormLayout()
 
@@ -51,6 +55,7 @@ class SettingsDialog(QDialog):
 
         self.general_tab.setLayout(self.general_form_layout)
 
+    # API Settings Tab
     def init_api_settings_tab(self):
         self.api_settings_form_layout = QFormLayout()
 
@@ -70,6 +75,7 @@ class SettingsDialog(QDialog):
 
         self.api_settings_tab.setLayout(self.api_settings_form_layout)
 
+    # Spellcheck Tab
     def init_spellcheck_tab(self):
         self.spellcheck_form_layout = QFormLayout()
 
@@ -99,6 +105,71 @@ class SettingsDialog(QDialog):
 
         self.spellcheck_tab.setLayout(self.spellcheck_form_layout)
 
+    # Entity Settings Tab
+    def init_entity_settings_tab(self):
+        layout = QVBoxLayout()
+
+        self.entity_list = QListWidget()
+        self.load_entities()
+        layout.addWidget(self.entity_list)
+
+        self.new_entity_edit = QLineEdit()
+        layout.addWidget(self.new_entity_edit)
+
+        self.add_entity_button = QPushButton("Add Entity")
+        self.add_entity_button.clicked.connect(self.add_entity)
+        layout.addWidget(self.add_entity_button)
+
+        self.remove_entity_button = QPushButton("Remove Selected Entity")
+        self.remove_entity_button.clicked.connect(self.remove_entity)
+        layout.addWidget(self.remove_entity_button)
+
+        self.reset_entities_button = QPushButton("Reset to Default")
+        self.reset_entities_button.clicked.connect(self.reset_entities)
+        layout.addWidget(self.reset_entities_button)
+
+        self.entity_settings_tab.setLayout(layout)
+
+    # Load and Save Entities
+    def load_entities(self):
+        try:
+            with open("entities.json", "r") as file:
+                entities = json.load(file)
+                self.entity_list.addItems(entities)
+        except FileNotFoundError:
+            self.entity_list.addItems([
+                "Case Link", "Username", "Role", "Location", "Host", "IP", "Domain", "Hash", "URL"
+            ])
+            
+    def save_entities(self):
+        entities = [self.entity_list.item(i).text() for i in range(self.entity_list.count())]
+        with open("entities.json", "w") as file:
+            json.dump(entities, file, indent=4)
+
+    def add_entity(self):
+        new_entity = self.new_entity_edit.text().strip()
+        if new_entity:
+            self.entity_list.addItem(new_entity)
+            self.new_entity_edit.clear()
+            self.save_entities()
+
+    def remove_entity(self):
+        selected_items = self.entity_list.selectedItems()
+        if not selected_items:
+            return
+        for item in selected_items:
+            self.entity_list.takeItem(self.entity_list.row(item))
+        self.save_entities()
+    
+    def reset_entities(self):
+        default_entities = [
+            "Case Link", "Username", "Role", "Location", "Host", "IP", "Domain", "Hash", "URL"
+        ]
+        self.entity_list.clear()
+        self.entity_list.addItems(default_entities)
+        self.save_entities()
+
+    # Save Settings
     def save_settings(self):
         settings = {
             "sign_off_user": self.settings_sign_off_user.text(),
@@ -115,7 +186,9 @@ class SettingsDialog(QDialog):
 
         self.save_clients()
         self.save_custom_dictionary()
+        self.save_entities()
 
+    # Load Settings
     def load_settings(self):
         try:
             with open("settings.json", "r") as f:
@@ -131,6 +204,7 @@ class SettingsDialog(QDialog):
         except FileNotFoundError:
             return True
 
+    # Load and Save Clients
     def load_clients(self):
         try:
             with open('clients.csv', 'r') as csvfile:
@@ -148,6 +222,7 @@ class SettingsDialog(QDialog):
             writer.writerows(clients)
         QMessageBox.information(self, "Success", "Settings and clients saved successfully!")
 
+    # Load and Save Custom Dictionary
     def load_custom_dictionary(self):
         try:
             with open('custom_dict.txt', 'r') as f:

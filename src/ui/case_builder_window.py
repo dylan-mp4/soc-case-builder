@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from datetime import datetime
 from PyQt6.QtWidgets import QMainWindow, QTabWidget, QApplication, QInputDialog, QDialog, QVBoxLayout, QFormLayout, QLineEdit, QPushButton, QTextEdit, QLabel, QFileDialog
 from PyQt6.QtCore import Qt
@@ -139,7 +140,8 @@ class CaseBuilderWindow(QMainWindow):
                     "crux": current_tab.crux_field.text(),
                     "escalation_info": current_tab.escalation_info.toPlainText(),
                     "close_reason": current_tab.close_reason.toPlainText(),
-                    "close_info": current_tab.close_info.toPlainText()
+                    "close_info": current_tab.close_info.toPlainText(),
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
 
                 # Save common fields
@@ -165,7 +167,7 @@ class CaseBuilderWindow(QMainWindow):
                         case_data["custom_entities"].append({"name": name, "value": value})
 
                 case_name = self.central_widget.tabText(current_index)
-                sanitized_case_name = case_name.replace(".", "_")
+                sanitized_case_name = re.sub(r'[^\w\s-]', '_', case_name)
                 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                 filename = f"{sanitized_case_name}_{timestamp}.json"
                 logs_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')

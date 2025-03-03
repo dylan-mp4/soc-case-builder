@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (
     QRadioButton, QButtonGroup, QComboBox, QHBoxLayout
 )
 import csv
+import json
 from utils.api_requests import get_abuse_info, get_domain_info, get_hash_info, get_url_info
 from utils.spell_check import SpellTextEdit
 
@@ -47,9 +48,7 @@ class CaseBuilderTab(QWidget):
         # Add dropdown and button for premade entities
         self.entity_dropdown_layout = QHBoxLayout()
         self.entity_dropdown = QComboBox()
-        self.entity_dropdown.addItems([
-            "Case Link", "Username", "Role", "Location", "Host", "IP", "Domain", "Hash", "URL"
-        ])
+        self.load_entities()
         self.add_entity_button = QPushButton("Add Entity")
         self.add_entity_button.clicked.connect(self.add_selected_entity)
         self.entity_dropdown_layout.addWidget(self.entity_dropdown)
@@ -125,6 +124,16 @@ class CaseBuilderTab(QWidget):
         self.escalation_rb.toggled.connect(self.toggle_fields)
 
         self.setLayout(self.case_builder_layout)
+
+    def load_entities(self):
+        try:
+            with open("entities.json", "r") as file:
+                entities = json.load(file)
+                self.entity_dropdown.addItems(entities)
+        except FileNotFoundError:
+            self.entity_dropdown.addItems([
+                "Case Link", "Username", "Role", "Location", "Host", "IP", "Domain", "Hash", "URL"
+            ])
 
     def toggle_fields(self):
         is_escalation = self.escalation_rb.isChecked()
