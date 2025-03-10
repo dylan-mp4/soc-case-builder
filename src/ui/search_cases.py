@@ -7,8 +7,7 @@ class SearchCases(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Search Cases")
-        self.setFixedWidth(800)
-        self.setFixedHeight(600)
+        self.resize(800, 600)
 
         layout = QVBoxLayout()
 

@@ -269,6 +269,23 @@ class CaseBuilderTab(QWidget):
             if client:
                 final_text.append(f"Dear {client},\n")
 
+        # Append case link at the top
+        for i in range(self.common_fields_layout.rowCount()):
+            label_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
+            field_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
+            if label_item and field_item:
+                label = label_item.widget().text()
+                if label == "Case Link:":
+                    field_layout = field_item.layout()
+                    if field_layout:
+                        for j in range(field_layout.count()):
+                            widget = field_layout.itemAt(j).widget()
+                            if isinstance(widget, QLineEdit):
+                                text = widget.text()
+                                if text:
+                                    final_text.append(f"{label} {text}\n")
+
+        # Append reason and information sections
         if self.close_case_rb.isChecked():
             reason = self.close_reason.toPlainText()
             if reason:
@@ -290,27 +307,28 @@ class CaseBuilderTab(QWidget):
             field_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
             if label_item and field_item:
                 label = label_item.widget().text()
-                field_layout = field_item.layout()
-                if field_layout:
-                    for j in range(field_layout.count()):
-                        widget = field_layout.itemAt(j).widget()
-                        if isinstance(widget, QLineEdit):
-                            text = widget.text()
-                            if text:  # Only include non-empty fields
-                                if label == "IP:" and self.settings_tab.settings_abuse_api_key.text():
-                                    abuse_info = get_abuse_info(text, self.settings_tab.settings_abuse_api_key.text())
-                                    other_fields_text.append(f"\n{label} {text} - {abuse_info}")
-                                elif label == "Domain:":
-                                    domain_info = get_domain_info(text)
-                                    other_fields_text.append(f"\n{label} {text} - {domain_info}")
-                                elif label == "Hash:" and self.settings_tab.settings_vt_api_key.text():
-                                    hash_info = get_hash_info(text, self.settings_tab.settings_vt_api_key.text())
-                                    other_fields_text.append(f"\n{label} {text} - {hash_info}")
-                                elif label == "URL:" and self.settings_tab.settings_urlscan_api_key.text():
-                                    urlinfo = get_url_info(text, self.settings_tab.settings_urlscan_api_key.text())
-                                    other_fields_text.append(f"\n{label} {text} - {urlinfo}")
-                                else:
-                                    final_text.append(f"{label} {text}")
+                if label != "Case Link:":
+                    field_layout = field_item.layout()
+                    if field_layout:
+                        for j in range(field_layout.count()):
+                            widget = field_layout.itemAt(j).widget()
+                            if isinstance(widget, QLineEdit):
+                                text = widget.text()
+                                if text:  # Only include non-empty fields
+                                    if label == "IP:" and self.settings_tab.settings_abuse_api_key.text():
+                                        abuse_info = get_abuse_info(text, self.settings_tab.settings_abuse_api_key.text())
+                                        other_fields_text.append(f"\n{label} {text} - {abuse_info}")
+                                    elif label == "Domain:":
+                                        domain_info = get_domain_info(text)
+                                        other_fields_text.append(f"\n{label} {text} - {domain_info}")
+                                    elif label == "Hash:" and self.settings_tab.settings_vt_api_key.text():
+                                        hash_info = get_hash_info(text, self.settings_tab.settings_vt_api_key.text())
+                                        other_fields_text.append(f"\n{label} {text} - {hash_info}")
+                                    elif label == "URL:" and self.settings_tab.settings_urlscan_api_key.text():
+                                        urlinfo = get_url_info(text, self.settings_tab.settings_urlscan_api_key.text())
+                                        other_fields_text.append(f"\n{label} {text} - {urlinfo}")
+                                    else:
+                                        final_text.append(f"{label} {text}")
 
         # Append custom entities
         for name_edit, value_edit, _ in self.custom_entities:
