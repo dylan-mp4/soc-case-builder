@@ -10,3 +10,5 @@ src/resources/__pycache__
 build/
 dist/
 custom_dict.txt
+src/entities.json
+src/entities.json

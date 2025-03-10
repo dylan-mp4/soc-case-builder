@@ -8,6 +8,8 @@ SOC Case Builder is a Python-based application designed to help security operati
 - Save case information to text files
 - Configure settings, including API keys for various services
 - Add and manage clients
+- Add and manage custom entities
+- Spell check support
 - User-friendly interface built with PyQt6
 
 ## Installation
@@ -46,9 +48,17 @@ The settings can be configured through the settings dialog in the application. T
 - VirusTotal API Key
 - URLScan API Key
 - URLScan wait time (0-100s)
+- Custom entities
+- Spell check settings
 
 ### Clients
-Clients can be added and managed through the settings dialog. The clients are stored in clients.csv.
+Clients can be added and managed through the settings dialog. The clients are stored in `clients.csv`.
+
+### Custom Entities
+Custom entities can be added and managed through the settings dialog. The entities are stored in `entities.json`.
+
+### Spell Check
+The spell check feature can be configured through the settings dialog. You can add custom words to the dictionary and select the language region.
 
 ## Contributing
 Contributions are welcome! Please open an issue or submit a pull request for any improvements or bug fixes.
@@ -63,4 +73,3 @@ This project is licensed under the MIT License. See the LICENSE file for details
 - VirusTotal
 - URLScan
 - Networkcalc
-
