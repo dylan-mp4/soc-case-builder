@@ -6,6 +6,7 @@ import csv
 import json
 from utils.api_requests import get_abuse_info, get_domain_info, get_hash_info, get_url_info
 from utils.spell_check import SpellTextEdit
+from PyQt6.QtWidgets import QMessageBox
 
 class PlainTextLineEdit(QLineEdit):
     def insertFromMimeData(self, source):
@@ -217,6 +218,14 @@ class CaseBuilderTab(QWidget):
         self.add_field(f"{selected_entity}:", self.common_fields_layout)
 
     def clear_fields(self):
+        # Show a confirmation dialog before clearing fields
+        confirmation = QMessageBox.question(
+            self, "Confirm Clear", "Are you sure you want to clear all fields?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if confirmation == QMessageBox.StandardButton.No:
+            return
+
         # Remove all dynamically added fields
         for i in reversed(range(self.common_fields_layout.rowCount())):
             label_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
