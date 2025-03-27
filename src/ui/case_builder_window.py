@@ -98,6 +98,7 @@ class CaseBuilderWindow(QMainWindow):
     def add_new_case_tab(self):
         new_tab = CaseBuilderTab(self.settings_dialog)
         self.central_widget.addTab(new_tab, f"Case {self.central_widget.count() + 1}")
+        self.central_widget.setCurrentWidget(new_tab)
 
     def rename_case_tab(self):
         current_index = self.central_widget.currentIndex()
