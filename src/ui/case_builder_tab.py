@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QScrollArea, QLineEdit, QPushButton, 
-    QRadioButton, QButtonGroup, QComboBox, QHBoxLayout
+    QRadioButton, QButtonGroup, QComboBox, QHBoxLayout, QDialog, QVBoxLayout, QTextEdit
 )
 import csv
 import json
@@ -9,6 +9,7 @@ from utils.spell_check import SpellTextEdit
 from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtWidgets import QMessageBox
 from ui.escalation_note import EscalationNoteDialog
+from ui.pop_out_text_edit import PopOutTextBox
 
 class PlainTextLineEdit(QLineEdit):
     def insertFromMimeData(self, source):
@@ -89,7 +90,7 @@ class CaseBuilderTab(QWidget):
             pass
 
         self.crux_field = PlainTextLineEdit()
-        self.escalation_info = PlainTextTextEdit()
+        self.escalation_info = PopOutTextBox()
         self.sign_off_user = PlainTextLineEdit()
         self.sign_off_org = PlainTextLineEdit()
 
@@ -100,8 +101,8 @@ class CaseBuilderTab(QWidget):
         # self.escalation_layout.addRow("Sign off (User):", self.sign_off_user)
         # self.escalation_layout.addRow("Sign off (Org):", self.sign_off_org)
 
-        self.close_reason = PlainTextTextEdit()
-        self.close_info = PlainTextTextEdit()
+        self.close_reason = PopOutTextBox()
+        self.close_info = PopOutTextBox()
         self.close_layout.addRow("Reason:", self.close_reason)
         self.close_layout.addRow("Information:", self.close_info)
 
