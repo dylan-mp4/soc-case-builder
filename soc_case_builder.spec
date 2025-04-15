@@ -11,7 +11,7 @@ a = Analysis(
         ('src/resources/__init__.py', 'resources'),
         ('src/ui/*.py', 'ui'),
         ('src/utils/*.py', 'utils'),
-        ('src/assets', 'assets')
+        ('src/assets', '_internal/assets')
     ],
     hiddenimports=[
         'certifi',

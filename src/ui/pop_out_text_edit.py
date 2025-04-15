@@ -3,7 +3,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QPushButton, QHBoxLayout
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
-from PyQt6.QtSvgWidgets import QSvgWidget
 
 class PopOutTextEdit(QDialog):
     def __init__(self, main_text_edit):
