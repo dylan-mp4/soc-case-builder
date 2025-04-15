@@ -19,6 +19,7 @@ a = Analysis(
         'PyQt6',
         'PyQt6.Qt6',
         'PyQt6.sip',
+        'PyQt6.QtSvgWidgets',
         'requests',
         'urllib3',
         'altgraph',
