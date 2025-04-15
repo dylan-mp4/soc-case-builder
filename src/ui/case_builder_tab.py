@@ -7,6 +7,8 @@ import json
 from utils.api_requests import get_abuse_info, get_domain_info, get_hash_info, get_url_info
 from utils.spell_check import SpellTextEdit
 from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QMessageBox
+from ui.escalation_note import EscalationNoteDialog
 
 class PlainTextLineEdit(QLineEdit):
     def insertFromMimeData(self, source):
@@ -115,9 +117,18 @@ class CaseBuilderTab(QWidget):
         self.clear_button.clicked.connect(self.clear_fields)
         self.case_builder_layout.addWidget(self.clear_button)
 
+        self.escalation_note = QPushButton("Create Escalation Note")
+        self.escalation_note.clicked.connect(self.escalationnote)
+        self.case_builder_layout.addWidget(self.escalation_note)
+        self.escalation_note.setVisible(False)  # Initially hidden
+        # Update visibility of the button when toggling fields
+        self.escalation_rb.toggled.connect(lambda: self.escalation_note.setVisible(self.escalation_rb.isChecked()))
+
         self.output_text = PlainTextTextEdit()
         self.case_builder_layout.addWidget(self.output_text)
 
+
+        
         # Show relevant fields by default (close case)
         self.toggle_fields()
 
@@ -217,6 +228,28 @@ class CaseBuilderTab(QWidget):
         selected_entity = self.entity_dropdown.currentText()
         self.add_field(f"{selected_entity}:", self.common_fields_layout)
 
+    def escalationnote(self):
+    # Get the required data for the dialog
+        assigned_analyst = self.settings_tab.settings_sign_off_user.text()
+        case_link = self.common_fields_layout.itemAt(0, QFormLayout.ItemRole.FieldRole).layout().itemAt(0).widget().text()
+        client = self.client_combo.currentText()
+
+        # Create and show the dialog
+        dialog = EscalationNoteDialog(self, assigned_analyst, case_link, client)
+        if dialog.exec():
+            # Retrieve the data from the dialog
+            escalation_note_data = dialog.get_escalation_note_data()
+            escalation_note = (
+                f"Assigned Analyst: {escalation_note_data['assigned_analyst']}\n"
+                f"Reviewed By: {escalation_note_data['reviewed_by']}\n"
+                f"Case Link: {escalation_note_data['case_link']}\n"
+                f"Date: {escalation_note_data['date']}\n"
+                f"Environment: {escalation_note_data['environment']}\n"
+                f"Severity: {escalation_note_data['severity']}\n"
+                f"Escalation Summary:{escalation_note_data['escalation_summary']}"
+            )
+            QMessageBox.information(self, "Escalation Note", escalation_note)
+
     def clear_fields(self):
         # Show a confirmation dialog before clearing fields
         confirmation = QMessageBox.question(
@@ -225,7 +258,7 @@ class CaseBuilderTab(QWidget):
         )
         if confirmation == QMessageBox.StandardButton.No:
             return
-
+    
         # Remove all dynamically added fields
         for i in reversed(range(self.common_fields_layout.rowCount())):
             label_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
@@ -284,16 +317,6 @@ class CaseBuilderTab(QWidget):
             field_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
             if label_item and field_item:
                 label = label_item.widget().text()
-                if label == "Case Link:":
-                    field_layout = field_item.layout()
-                    if field_layout:
-                        for j in range(field_layout.count()):
-                            widget = field_layout.itemAt(j).widget()
-                            if isinstance(widget, QLineEdit):
-                                text = widget.text()
-                                if text:
-                                    final_text.append(f"{label} {text}\n")
-
         # Append reason and information sections
         if self.close_case_rb.isChecked():
             reason = self.close_reason.toPlainText()
