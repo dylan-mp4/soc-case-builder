@@ -10,7 +10,7 @@ a = Analysis(
         ('src/resources/version.py', 'resources'),
         ('src/resources/__init__.py', 'resources'),
         ('src/ui/*.py', 'ui'),
-        ('src/utils/*.py', 'utils')
+        ('src/utils/*.py', 'utils'),
         ('assets', 'assets')
     ],
     hiddenimports=[
