@@ -33,6 +33,11 @@ class SpellTextEdit(QTextEdit):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)
 
+    def insertFromMimeData(self, source):
+        # Override to strip MIME data and only insert plain text
+        plain_text = source.text()
+        self.insertPlainText(plain_text)
+
     def show_context_menu(self, position):
         cursor = self.cursorForPosition(position)
         cursor.select(QTextCursor.SelectionType.WordUnderCursor)
