@@ -1,8 +1,8 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QPushButton, QHBoxLayout
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
+
+from PyQt6.QtWidgets import QWidget, QDialog, QVBoxLayout, QPushButton, QHBoxLayout
+from PyQt6.QtGui import QIcon, QPainter, QPolygon, QColor
+from PyQt6.QtCore import Qt, QPoint
+from utils.spell_check import SpellTextEdit
 
 class PopOutTextEdit(QDialog):
     def __init__(self, main_text_edit):
@@ -17,7 +17,7 @@ class PopOutTextEdit(QDialog):
         layout = QVBoxLayout(self)
 
         # Text edit in the pop-out dialog
-        self.pop_out_text_edit = QTextEdit(self)
+        self.pop_out_text_edit = SpellTextEdit(self)
         self.pop_out_text_edit.setPlainText(self.main_text_edit.toPlainText())
         self.pop_out_text_edit.textChanged.connect(self.sync_to_main)
         layout.addWidget(self.pop_out_text_edit)
@@ -42,14 +42,11 @@ class PopOutTextBox(QWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
 
         # Main text edit
-        self.text_edit = QTextEdit(self)
+        self.text_edit = SpellTextEdit(self)  # Use SpellTextEdit here
         self.layout().addWidget(self.text_edit)
 
         # Pop-out button
-        self.pop_out_button = QPushButton(self)
-        self.pop_out_button.setFixedSize(24, 24)
-        self.pop_out_button.setIcon(QIcon("assets/popout_icon.svg"))
-        self.pop_out_button.setStyleSheet("border: none;")  # Remove button border
+        self.pop_out_button = ArrowButton(self)
         self.pop_out_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.pop_out_button.clicked.connect(self.open_pop_out)
 
@@ -69,3 +66,32 @@ class PopOutTextBox(QWidget):
 
     def setPlainText(self, text):
         self.text_edit.setPlainText(text)
+
+
+class ArrowButton(QPushButton):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(24, 24)  # Set the size of the button
+        self.setStyleSheet("border: none;")  # Remove button border
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Define the arrow points
+        arrow = QPolygon([
+            QPoint(6, 18),  # Bottom-left
+            QPoint(18, 6),  # Top-right
+            QPoint(12, 6),  # Top-middle
+            QPoint(12, 12),  # Middle
+            QPoint(6, 12)   # Bottom-middle
+        ])
+
+        # Set the brush and pen
+        painter.setBrush(QColor("White"))  # Fill color for the arrow
+        painter.setPen(Qt.PenStyle.NoPen)  # No border for the arrow
+
+        # Draw the arrow
+        painter.drawPolygon(arrow)
+        painter.end()
