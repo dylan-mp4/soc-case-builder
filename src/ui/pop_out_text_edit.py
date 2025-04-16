@@ -67,6 +67,8 @@ class PopOutTextBox(QWidget):
     def setPlainText(self, text):
         self.text_edit.setPlainText(text)
 
+    def clear(self):
+        self.text_edit.clear()
 
 class ArrowButton(QPushButton):
     def __init__(self, parent=None):
