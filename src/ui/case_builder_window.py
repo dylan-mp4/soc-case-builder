@@ -10,6 +10,7 @@ from ui.case_builder_tab import CaseBuilderTab
 from ui.settings_dialog import SettingsDialog
 from ui.getting_started import GettingStarted
 from ui.search_cases import SearchCases
+from resources.get_version import get_version, check_for_updates, prompt_update_dialog
 
 class CaseBuilderWindow(QMainWindow):
     def __init__(self):
@@ -29,6 +30,8 @@ class CaseBuilderWindow(QMainWindow):
         self.central_widget.tabBarClicked.connect(self.handle_tab_click)
         self.setCentralWidget(self.central_widget)
         
+        self.check_for_updates()
+
         self.create_menu()
         self.case_builder_tab = CaseBuilderTab(self.settings_dialog)
         self.central_widget.addTab(self.case_builder_tab, "Case 1")
@@ -36,6 +39,13 @@ class CaseBuilderWindow(QMainWindow):
     def show_getting_started(self):
         dialog = GettingStarted()
         dialog.exec()
+
+    def check_for_updates(self):
+        current_version = get_version()
+        latest_version = check_for_updates(current_version)
+        print(f"Current version: {current_version}, Latest version: {latest_version}")  # Debug print
+        if latest_version:
+            prompt_update_dialog(self, current_version, latest_version)
 
     def closeEvent(self, event):
         print("Main window closing event triggered.")  # Debug print
