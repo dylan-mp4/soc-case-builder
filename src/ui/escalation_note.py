@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QLineEdit, QCombo
 from PyQt6.QtCore import QDate, QMimeData, QTimer
 from PyQt6.QtGui import QClipboard
 from PyQt6.QtWidgets import QApplication
+from weakref import ref
 
 class EscalationNoteDialog(QDialog):
     def __init__(self, parent, assigned_analyst, case_link, client):
@@ -90,6 +91,6 @@ class EscalationNoteDialog(QDialog):
             original_text = sender.text()  # Save the original text
             sender.setText("Copied!")
             sender.repaint()  # Force the button to update its appearance
-
+            sender_ref = ref(sender)
             # Restore the original text after a short delay
-            QTimer.singleShot(1000, lambda: sender.setText(original_text))
+            QTimer.singleShot(1000, lambda: sender_ref() and sender_ref().setText(original_text))
