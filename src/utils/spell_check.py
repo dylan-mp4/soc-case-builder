@@ -2,8 +2,8 @@ from PyQt6.QtGui import QSyntaxHighlighter, QTextCharFormat, QColor, QTextCursor
 from PyQt6.QtCore import QRegularExpression, Qt
 from PyQt6.QtWidgets import QTextEdit
 import enchant
-from enchant.checker import SpellChecker
-from enchant.tokenize import EmailFilter, URLFilter
+# from enchant.checker import SpellChecker
+# from enchant.tokenize import EmailFilter, URLFilter
 from ui.settings_dialog import SettingsDialog
 
 class SpellHighlighter(QSyntaxHighlighter):
@@ -36,6 +36,7 @@ class SpellTextEdit(QTextEdit):
     def insertFromMimeData(self, source):
         # Override to strip MIME data and only insert plain text
         plain_text = source.text()
+        plain_text = plain_text.replace("\t", "")
         self.insertPlainText(plain_text)
 
     def show_context_menu(self, position):
