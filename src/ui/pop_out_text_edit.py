@@ -1,6 +1,6 @@
 
 from PyQt6.QtWidgets import QWidget, QDialog, QVBoxLayout, QPushButton, QHBoxLayout
-from PyQt6.QtGui import QIcon, QPainter, QPolygon, QColor
+from PyQt6.QtGui import QPainter, QPolygon, QColor
 from PyQt6.QtCore import Qt, QPoint
 from utils.spell_check import SpellTextEdit
 

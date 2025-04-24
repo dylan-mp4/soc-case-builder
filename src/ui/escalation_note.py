@@ -1,11 +1,10 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QLineEdit, QComboBox, QTextEdit, QPushButton, QHBoxLayout, QMessageBox
-from PyQt6.QtCore import QDate, QMimeData, QTimer
-from PyQt6.QtGui import QClipboard
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QLineEdit, QComboBox, QPushButton, QHBoxLayout
+from PyQt6.QtCore import QDate, QTimer
 from PyQt6.QtWidgets import QApplication
 from weakref import ref
 
 class EscalationNoteDialog(QDialog):
-    def __init__(self, parent, assigned_analyst, case_link, client):
+    def __init__(self, parent, assigned_analyst, case_link, client, escalation_summary):
         super().__init__(parent)
         self.setWindowTitle("Escalation Note")
         self.setFixedWidth(800)
@@ -42,7 +41,7 @@ class EscalationNoteDialog(QDialog):
         form_layout.addRow("Severity:", self.severity)
 
         # Escalation Summary
-        self.escalation_summary = QLineEdit()
+        self.escalation_summary = QLineEdit(escalation_summary)
         form_layout.addRow("Escalation Summary:", self.escalation_summary)
 
         layout.addLayout(form_layout)
