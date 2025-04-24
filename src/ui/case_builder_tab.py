@@ -1,6 +1,7 @@
+import re
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QScrollArea, QLineEdit, QPushButton, 
-    QRadioButton, QButtonGroup, QComboBox, QHBoxLayout, QDialog, QVBoxLayout, QTextEdit
+    QRadioButton, QButtonGroup, QComboBox, QHBoxLayout, QVBoxLayout, QTabWidget
 )
 import csv
 import json
@@ -234,9 +235,23 @@ class CaseBuilderTab(QWidget):
         assigned_analyst = self.settings_tab.settings_sign_off_user.text()
         case_link = self.common_fields_layout.itemAt(0, QFormLayout.ItemRole.FieldRole).layout().itemAt(0).widget().text()
         client = self.client_combo.currentText()
+        parent_widget = self.parentWidget()
+        if parent_widget and hasattr(parent_widget, 'parentWidget'):
+            tab_widget = parent_widget.parentWidget()
+            if isinstance(tab_widget, QTabWidget):
+                tab_index = tab_widget.indexOf(self)
+                tab_name = tab_widget.tabText(tab_index)
+            else:
+                tab_name = ""
+        else:
+            tab_name = ""
+        if re.match(r"(?i)^case \d+$", tab_name):  # Case-insensitive match
+            escalation_summary = ""  # Set to blank
+        else:
+            escalation_summary = tab_name  # Otherwise, use the tab name
 
         # Create and show the dialog
-        dialog = EscalationNoteDialog(self, assigned_analyst, case_link, client)
+        dialog = EscalationNoteDialog(self, assigned_analyst, case_link, client, escalation_summary)
         if dialog.exec():
             # Retrieve the data from the dialog
             escalation_note_data = dialog.get_escalation_note_data()

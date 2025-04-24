@@ -2,7 +2,7 @@ import json
 import os
 import re
 from datetime import datetime
-from PyQt6.QtWidgets import QMainWindow, QTabWidget, QApplication, QInputDialog, QDialog, QVBoxLayout, QFormLayout, QLineEdit, QPushButton, QTextEdit, QLabel, QFileDialog
+from PyQt6.QtWidgets import QMainWindow, QTabWidget, QApplication, QInputDialog, QFormLayout, QLineEdit, QFileDialog
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QGuiApplication, QAction
 from resources.version import __version__
