@@ -36,7 +36,7 @@ class SpellTextEdit(QTextEdit):
     def insertFromMimeData(self, source):
         # Override to strip MIME data and only insert plain text
         plain_text = source.text()
-        plain_text = plain_text.replace("\t", "")
+        plain_text = plain_text.replace("\t", " ")
         self.insertPlainText(plain_text)
 
     def show_context_menu(self, position):
