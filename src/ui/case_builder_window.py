@@ -55,6 +55,11 @@ class CaseBuilderWindow(QMainWindow):
         save_case_action.triggered.connect(self.save_case)
         file_menu.addAction(save_case_action)
 
+        save_all_cases_action = QAction('Save All Cases', self)
+        save_all_cases_action.setShortcut('Ctrl+Shift+S')
+        save_all_cases_action.triggered.connect(self.save_all_cases)
+        file_menu.addAction(save_all_cases_action)
+
         load_case_action = QAction('Load Case', self)
         load_case_action.setShortcut('Ctrl+P')
         load_case_action.triggered.connect(self.load_case)
@@ -168,6 +173,54 @@ class CaseBuilderWindow(QMainWindow):
                         case_data["custom_entities"].append({"name": name, "value": value})
 
                 case_name = self.central_widget.tabText(current_index)
+                sanitized_case_name = re.sub(r'[^\w\s-]', '_', case_name)
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                filename = f"{sanitized_case_name}_{timestamp}.json"
+                logs_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
+                os.makedirs(logs_dir, exist_ok=True)
+                filepath = os.path.join(logs_dir, filename)
+                with open(filepath, "w") as file:
+                    json.dump(case_data, file, indent=4)
+    def save_all_cases(self):
+        for i in range(self.central_widget.count()):
+            current_tab = self.central_widget.widget(i)
+            if isinstance(current_tab, CaseBuilderTab):
+                case_data = {
+                    "tab_name": self.central_widget.tabText(i),
+                    "fields": [],
+                    "custom_entities": [],
+                    "route": "close" if current_tab.close_case_rb.isChecked() else "escalation",
+                    "client": current_tab.client_combo.currentText(),
+                    "crux": current_tab.crux_field.text(),
+                    "escalation_info": current_tab.escalation_info.toPlainText(),
+                    "close_reason": current_tab.close_reason.toPlainText(),
+                    "close_info": current_tab.close_info.toPlainText(),
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+
+                # Save common fields
+                for j in range(current_tab.common_fields_layout.rowCount()):
+                    label_item = current_tab.common_fields_layout.itemAt(j, QFormLayout.ItemRole.LabelRole)
+                    field_item = current_tab.common_fields_layout.itemAt(j, QFormLayout.ItemRole.FieldRole)
+                    if label_item and field_item:
+                        label = label_item.widget().text()
+                        field_layout = field_item.layout()
+                        if field_layout:
+                            for k in range(field_layout.count()):
+                                widget = field_layout.itemAt(k).widget()
+                                if isinstance(widget, QLineEdit):
+                                    text = widget.text()
+                                    if text:
+                                        case_data["fields"].append({"label": label, "value": text})
+
+                # Save custom entities
+                for name_edit, value_edit, _ in current_tab.custom_entities:
+                    name = name_edit.text()
+                    value = value_edit.text()
+                    if name and value:
+                        case_data["custom_entities"].append({"name": name, "value": value})
+
+                case_name = self.central_widget.tabText(i)
                 sanitized_case_name = re.sub(r'[^\w\s-]', '_', case_name)
                 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                 filename = f"{sanitized_case_name}_{timestamp}.json"
