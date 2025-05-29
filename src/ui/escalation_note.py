@@ -77,7 +77,7 @@ class EscalationNoteDialog(QDialog):
             f"Date: {escalation_note_data['date']}\n"
             f"Environment: {escalation_note_data['environment']}\n"
             f"Severity: {escalation_note_data['severity']}\n"
-            f"Escalation Summary:{escalation_note_data['escalation_summary']}"
+            f"Escalation Summary: {escalation_note_data['escalation_summary']}"
         )
 
         # Access the system clipboard
