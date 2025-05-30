@@ -168,6 +168,9 @@ class CaseBuilderTab(QWidget):
     def add_field(self, label, layout):
         field_layout = QHBoxLayout()
         line_edit = PlainTextLineEdit()
+        query_button = QPushButton("S")
+        query_button.setMaximumWidth(20)
+        query_button.clicked.connect(lambda: self.open_query_finder(label, line_edit.text()))
         add_button = QPushButton("+")
         add_button.setMaximumWidth(20)
         add_button.clicked.connect(lambda: self.add_field(label, layout))
@@ -175,6 +178,7 @@ class CaseBuilderTab(QWidget):
         remove_button.setMaximumWidth(20)
         remove_button.clicked.connect(lambda: self.remove_field(label, layout, field_layout))
         field_layout.addWidget(line_edit)
+        field_layout.addWidget(query_button)
         field_layout.addWidget(add_button)
         field_layout.addWidget(remove_button)
 
@@ -265,7 +269,13 @@ class CaseBuilderTab(QWidget):
                 f"Escalation Summary:{escalation_note_data['escalation_summary']}"
             )
             QMessageBox.information(self, "Escalation Note", escalation_note)
-
+            
+    def open_query_finder(self, label, value):
+        from ui.query_finder_dialog import QueryFinderDialog
+        # Extract entity type from label (e.g., "IP:" -> "IP")
+        entity_type = label.rstrip(":")
+        dialog = QueryFinderDialog(entity_type, value, self)
+        dialog.exec()
     def clear_fields(self):
         # Show a confirmation dialog before clearing fields
         confirmation = QMessageBox.question(

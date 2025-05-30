@@ -1,0 +1,9 @@
+[
+  {
+    "name": "SigninLogs by IP",
+    "template": "SigninLogs\n| where IPAddress == {{Entity}}",
+    "entity_types": [
+      "IP"
+    ]
+  }
+]

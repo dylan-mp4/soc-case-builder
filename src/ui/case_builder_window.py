@@ -10,6 +10,7 @@ from ui.case_builder_tab import CaseBuilderTab
 from ui.settings_dialog import SettingsDialog
 from ui.getting_started import GettingStarted
 from ui.search_cases import SearchCases
+from ui.query_builder_dialog import QueryBuilderDialog
 
 class CaseBuilderWindow(QMainWindow):
     def __init__(self):
@@ -88,6 +89,11 @@ class CaseBuilderWindow(QMainWindow):
         getting_started_action.triggered.connect(self.open_getting_started)
         menubar.addAction(getting_started_action)
 
+        query_builder_action = QAction('Query Builder', self)
+        query_builder_action.triggered.connect(self.open_query_builder_dialog)
+        menubar.addAction(query_builder_action)
+        
+
     def open_search_cases(self):
         dialog = SearchCases(self)
         dialog.exec()
@@ -99,6 +105,10 @@ class CaseBuilderWindow(QMainWindow):
     def open_settings_dialog(self):
         self.settings_dialog.load_settings()  # Reload settings before showing the dialog
         self.settings_dialog.exec()
+
+    def open_query_builder_dialog(self):
+        dialog = QueryBuilderDialog(self)
+        dialog.exec()
 
     def add_new_case_tab(self):
         new_tab = CaseBuilderTab(self.settings_dialog)
