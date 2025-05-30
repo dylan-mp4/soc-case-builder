@@ -11,6 +11,7 @@ from ui.settings_dialog import SettingsDialog
 from ui.getting_started import GettingStarted
 from ui.search_cases import SearchCases
 from ui.query_builder_dialog import QueryBuilderDialog
+from ui.bulk_add_entities_dialog import BulkAddEntitiesDialog
 
 class CaseBuilderWindow(QMainWindow):
     def __init__(self):
@@ -92,7 +93,10 @@ class CaseBuilderWindow(QMainWindow):
         query_builder_action = QAction('Query Builder', self)
         query_builder_action.triggered.connect(self.open_query_builder_dialog)
         menubar.addAction(query_builder_action)
-        
+
+        bulk_add_action = QAction('Bulk Add Entities', self)
+        bulk_add_action.triggered.connect(self.open_bulk_add_entities)
+        menubar.addAction(bulk_add_action)
 
     def open_search_cases(self):
         dialog = SearchCases(self)
@@ -115,6 +119,34 @@ class CaseBuilderWindow(QMainWindow):
         self.central_widget.addTab(new_tab, f"Case {self.central_widget.count() + 1}")
         self.central_widget.setCurrentWidget(new_tab)
 
+    # ...existing code...
+    def open_bulk_add_entities(self):
+        dialog = BulkAddEntitiesDialog(self)
+        if dialog.exec():
+            entities = dialog.get_entities()
+            for label, value in entities:
+                entity_type = dialog.detect_entity_type(value)
+                if not label or label.lower() == "other":
+                    if entity_type == "Other":
+                        label = "Other:"
+                    else:
+                        label = f"{entity_type}:"
+                else:
+                    label = f"{label}:"
+                # Add to current tab
+                current_tab = self.central_widget.currentWidget()
+                if isinstance(current_tab, CaseBuilderTab):
+                    current_tab.add_field(label, current_tab.common_fields_layout)
+                    # Set value in the last added field
+                    pos = current_tab.entity_positions.get(label)
+                    if pos is not None:
+                        field_item = current_tab.common_fields_layout.itemAt(pos, QFormLayout.ItemRole.FieldRole)
+                        if field_item:
+                            field_layout = field_item.layout()
+                            if field_layout and field_layout.count() > 0:
+                                widget = field_layout.itemAt(0).widget()
+                                if widget:
+                                    widget.setText(value)
     def rename_case_tab(self):
         current_index = self.central_widget.currentIndex()
         if current_index != -1:
