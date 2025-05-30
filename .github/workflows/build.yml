@@ -36,6 +36,13 @@ jobs:
         .venv\Scripts\pip install -r requirements.txt
         .venv\Scripts\pip install pyinstaller
 
+    - name: Extract version from version.py
+      id: get_version
+      shell: pwsh
+      run: |
+        $version = Select-String -Path src/resources/version.py -Pattern '__version__\s*=\s*"(.*)"' | ForEach-Object { $_.Matches[0].Groups[1].Value }
+        echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
     - name: Build executable with PyInstaller
       run: |
         .venv\Scripts\pyinstaller soc_case_builder.spec
@@ -50,8 +57,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v1.1.14
-        release_name: Release v1.1.14
+        tag_name: v${{ env.VERSION }}
+        release_name: Release v${{ env.VERSION }}
         draft: false
         prerelease: false
 
