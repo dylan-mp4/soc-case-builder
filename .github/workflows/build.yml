@@ -13,66 +13,66 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
-    - name: Cache virtual environment
-      uses: actions/cache@v3
-      with:
-        path: .venv
-        key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-venv-
+      - name: Cache virtual environment
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-venv-
 
-    - name: Set up or reuse virtual environment
-      shell: pwsh
-      run: |
-        if (!(Test-Path ".venv")) {
-          python -m venv .venv
-          .venv\Scripts\pip install --upgrade pip
-          .venv\Scripts\pip install -r requirements.txt
-          .venv\Scripts\pip install pyinstaller
-        } else {
-          Write-Host "Reusing cached virtual environment"
-        }
+      - name: Set up or reuse virtual environment
+        shell: pwsh
+        run: |
+          if (!(Test-Path ".venv")) {
+            python -m venv .venv
+            .venv\Scripts\pip install --upgrade pip
+            .venv\Scripts\pip install -r requirements.txt
+            .venv\Scripts\pip install pyinstaller
+          } else {
+            Write-Host "Reusing cached virtual environment"
+          }
 
-    - name: Extract version from version.py
-      id: get_version
-      shell: pwsh
-      run: |
-        $version = Select-String -Path src/resources/version.py -Pattern '__version__\s*=\s*"(.*)"' | ForEach-Object { $_.Matches[0].Groups[1].Value }
-        echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Extract version from version.py
+        id: get_version
+        shell: pwsh
+        run: |
+          $version = Select-String -Path src/resources/version.py -Pattern '__version__\s*=\s*"(.*)"' | ForEach-Object { $_.Matches[0].Groups[1].Value }
+          echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-    - name: Build executable with PyInstaller
-      run: |
-        .venv\Scripts\pyinstaller soc_case_builder.spec
+      - name: Build executable with PyInstaller
+        run: |
+          .venv\Scripts\pyinstaller soc_case_builder.spec
 
-    - name: Zip the executable
-      run: |
-        powershell Compress-Archive -Path dist/soc_case_builder -DestinationPath dist/soc_case_builder.zip
+      - name: Zip the executable
+        run: |
+          powershell Compress-Archive -Path dist/soc_case_builder -DestinationPath dist/soc_case_builder.zip
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: v${{ env.VERSION }}
-        release_name: Release v${{ env.VERSION }}
-        draft: false
-        prerelease: false
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ env.VERSION }}
+          release_name: Release v${{ env.VERSION }}
+          draft: false
+          prerelease: false
 
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: dist/soc_case_builder.zip
-        asset_name: soc_case_builder.zip
-        asset_content_type: application/zip
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist/soc_case_builder.zip
+          asset_name: soc_case_builder.zip
+          asset_content_type: application/zip
