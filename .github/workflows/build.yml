@@ -29,12 +29,17 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-venv-
 
-    - name: Create virtual environment
+    - name: Set up or reuse virtual environment
+      shell: pwsh
       run: |
-        python -m venv .venv
-        .venv\Scripts\pip install --upgrade pip
-        .venv\Scripts\pip install -r requirements.txt
-        .venv\Scripts\pip install pyinstaller
+        if (!(Test-Path ".venv")) {
+          python -m venv .venv
+          .venv\Scripts\pip install --upgrade pip
+          .venv\Scripts\pip install -r requirements.txt
+          .venv\Scripts\pip install pyinstaller
+        } else {
+          Write-Host "Reusing cached virtual environment"
+        }
 
     - name: Extract version from version.py
       id: get_version
