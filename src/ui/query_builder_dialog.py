@@ -107,23 +107,15 @@ class QueryBuilderDialog(QDialog):
             QMessageBox.warning(self, "Missing Data", "Please provide a name, template, and at least one entity type.")
             return
 
-        # Check if a query with the same name already exists (case-insensitive)
         idx = self.query_list.currentRow()
-        existing_idx = next((i for i, q in enumerate(self.queries) if q["name"].lower() == name.lower()), None)
-
         query_data = {"name": name, "template": template, "entity_types": entities}
 
-        if 0 <= idx < len(self.queries):
-            # Update the currently selected query
+        # Only update if the selected query's name matches the name field (case-insensitive)
+        if 0 <= idx < len(self.queries) and self.queries[idx]["name"].lower() == name.lower():
             self.queries[idx] = query_data
             self.query_list.item(idx).setText(name)
-        elif existing_idx is not None:
-            # Update the existing query with the same name
-            self.queries[existing_idx] = query_data
-            self.query_list.item(existing_idx).setText(name)
-            self.query_list.setCurrentRow(existing_idx)
         else:
-            # Add as a new query
+            # Always add as a new query
             self.queries.append(query_data)
             self.query_list.addItem(name)
             self.query_list.setCurrentRow(self.query_list.count() - 1)
