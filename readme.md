@@ -4,13 +4,18 @@ SOC Case Builder is a Python-based application designed to help security operati
 
 ## Features
 
+## Features
+
 - Create, rename, and remove case tabs
 - Save case information to text files
 - Configure settings, including API keys for various services
 - Add and manage clients
 - Add and manage custom entities
-- Spell check support
+- **Spell check** support using enchant
 - User-friendly interface built with PyQt6
+- **Bulk Add Entities:** Import multiple entities at once from CSV, JSON, or raw text (comma, space, or newline separated)
+- **Automatic Entity Type Detection:** Entity types (IP, Domain, URL, Hash, Email, etc.) are auto-detected when importing; unrecognized types are labeled "Other" and can be renamed or edited later
+- **Flexible Import:** Import entities from files or clipboard with automatic parsing and mapping to fields
 
 ## Installation
 
@@ -21,7 +26,7 @@ SOC Case Builder is a Python-based application designed to help security operati
 ### Getting Started
 #### Clone the Repository
 ```sh
-git clone https://github.com/yourusername/soc-case-builder.git
+git clone https://github.com/dylan-mp4/soc-case-builder.git
 cd soc-case-builder
 ```
 #### Create a Virtual Environment
