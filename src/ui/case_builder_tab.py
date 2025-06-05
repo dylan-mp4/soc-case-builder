@@ -110,19 +110,24 @@ class CaseBuilderTab(QWidget):
         self.case_builder_layout.addLayout(self.additional_info_layout)
 
     def _init_buttons(self):
+        button_row = QHBoxLayout()
         self.submit_button = QPushButton("Compile Case info")
         self.submit_button.clicked.connect(self.compile_case)
-        self.case_builder_layout.addWidget(self.submit_button)
+        button_row.addWidget(self.submit_button)
+
         self.clear_button = QPushButton("Clear All Fields")
         self.clear_button.clicked.connect(self.clear_fields)
-        self.case_builder_layout.addWidget(self.clear_button)
+        button_row.addWidget(self.clear_button)
+
         self.escalation_note = QPushButton("Create Escalation Note")
         self.escalation_note.clicked.connect(self.escalationnote)
-        self.case_builder_layout.addWidget(self.escalation_note)
+        button_row.addWidget(self.escalation_note)
         self.escalation_note.setVisible(False)
         self.escalation_rb.toggled.connect(
             lambda: self.escalation_note.setVisible(self.escalation_rb.isChecked())
         )
+
+        self.case_builder_layout.addLayout(button_row)
 
     def _init_output(self):
         self.output_text = PlainTextTextEdit()
