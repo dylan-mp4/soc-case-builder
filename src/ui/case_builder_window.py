@@ -302,6 +302,7 @@ class CaseBuilderWindow(QMainWindow):
                 else:
                     new_tab.close_case_rb.setChecked(True)
                 new_tab.toggle_fields()
+                self.central_widget.setCurrentWidget(new_tab)
                         
 if __name__ == "__main__":
     import sys
