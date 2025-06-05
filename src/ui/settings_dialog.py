@@ -1,5 +1,6 @@
 import json
 import csv
+import os
 from PyQt6.QtWidgets import QWidget, QFormLayout, QLineEdit, QPushButton, QLabel, QTextEdit, QMessageBox, QDialog, QVBoxLayout, QTabWidget, QListWidget, QComboBox, QHBoxLayout
 from PyQt6.QtGui import QIntValidator
 from PyQt6.QtCore import Qt
@@ -15,17 +16,21 @@ class SettingsDialog(QDialog):
         self.general_tab = QWidget()
         self.api_settings_tab = QWidget()
         self.spellcheck_tab = QWidget()
-        self.entity_settings_tab = QWidget()  # New tab for entity settings
+        self.entity_settings_tab = QWidget()
+        self.preferences_tab = QWidget()
 
         self.init_general_tab()
         self.init_api_settings_tab()
         self.init_spellcheck_tab()
-        self.init_entity_settings_tab()  # Initialize the new tab
+        self.init_entity_settings_tab()
+        self.init_preferences_tab()
 
         self.tab_widget.addTab(self.general_tab, "General")
         self.tab_widget.addTab(self.api_settings_tab, "API Settings")
         self.tab_widget.addTab(self.spellcheck_tab, "Spellcheck")
-        self.tab_widget.addTab(self.entity_settings_tab, "Entity Settings")  # Add new tab to the tab widget
+        self.tab_widget.addTab(self.entity_settings_tab, "Entity Settings")
+        self.tab_widget.addTab(self.preferences_tab, "Preferences")
+
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.tab_widget)
@@ -249,3 +254,47 @@ class SettingsDialog(QDialog):
     def save_spellcheck_settings(self):
         self.save_custom_dictionary()
         QMessageBox.information(self, "Success", "Spellcheck settings saved successfully!")
+
+    def init_preferences_tab(self):
+        layout = QFormLayout()
+        self.theme_combo = QComboBox()
+        self.load_themes()
+        self.apply_theme_button = QPushButton("Apply Theme")
+        self.apply_theme_button.clicked.connect(self.apply_selected_theme)
+        layout.addRow(QLabel("Theme:"), self.theme_combo)
+        layout.addRow(self.apply_theme_button)
+        self.preferences_tab.setLayout(layout)
+
+    def load_themes(self):
+        themes_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', 'themes')
+        self.theme_combo.clear()
+        if os.path.isdir(themes_dir):
+            themes = [f for f in os.listdir(themes_dir) if f.endswith('.qss')]
+            self.theme_combo.addItems(themes)
+        else:
+            self.theme_combo.addItem("No themes found")
+
+    def apply_selected_theme(self):
+        theme_name = self.theme_combo.currentText()
+        themes_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', 'themes')
+        theme_path = os.path.join(themes_dir, theme_name)
+        if os.path.isfile(theme_path):
+            with open(theme_path, "r", encoding="utf-8") as f:
+                qss = f.read()
+                from PyQt6.QtWidgets import QApplication
+                QApplication.instance().setStyleSheet(qss)
+            self.save_theme_to_settings(theme_name)  # Save theme to settings.json
+            QMessageBox.information(self, "Theme Applied", f"Theme '{theme_name}' has been applied.")
+        else:
+            QMessageBox.warning(self, "Theme Not Found", "Selected theme file does not exist.")
+
+    def save_theme_to_settings(self, theme_name):
+        settings_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'settings.json')
+        try:
+            with open(settings_path, "r", encoding="utf-8") as f:
+                settings = json.load(f)
+        except FileNotFoundError:
+            settings = {}
+        settings["theme"] = theme_name
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(settings, f, indent=4)
