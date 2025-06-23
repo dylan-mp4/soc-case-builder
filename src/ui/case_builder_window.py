@@ -62,8 +62,11 @@ class CaseBuilderWindow(QMainWindow):
             except Exception as e:
                 print("Failed to parse original-event JSON:", e)
                 original_event = {}
+            # Merge outer fields into original_event
+            for key in ("case-url-link", "alert-title"):
+                if key in data:
+                    original_event[key] = data[key]
             print(f"Received data: {original_event}")
-            # Use the global reference to call the method
             if flask_main_window:
                 flask_main_window.add_case_from_api(original_event)
             return jsonify({"status": "received"})
@@ -77,7 +80,9 @@ class CaseBuilderWindow(QMainWindow):
     def _add_case_from_api(self, event_dict):
         print("_add_case_from_api called!")
         new_tab = CaseBuilderTab(self.settings_dialog)
-        self.central_widget.addTab(new_tab, f"Case {self.central_widget.count() + 1}")
+        # Set tab name to alert-title if present
+        tab_name = event_dict.get("alert-title", f"Case {self.central_widget.count() + 1}")
+        self.central_widget.addTab(new_tab, tab_name)
         self.central_widget.setCurrentWidget(new_tab)
         new_tab.escalation_rb.setChecked(True)
         new_tab.toggle_fields()
@@ -109,7 +114,21 @@ class CaseBuilderWindow(QMainWindow):
                             widget = field_layout.itemAt(0).widget()
                             if widget:
                                 widget.setText(obs_value)
-        print(f"Added new case tab with info and {len(observables)} observables.")
+        # Add case-url-link as Case Link entity if present
+        case_url = event_dict.get("case-url-link", "")
+        if case_url:
+            label = "Case Link:"
+            new_tab.add_field(label, new_tab.common_fields_layout)
+            pos = new_tab.entity_positions.get(label)
+            if pos is not None:
+                field_item = new_tab.common_fields_layout.itemAt(pos, QFormLayout.ItemRole.FieldRole)
+                if field_item:
+                    field_layout = field_item.layout()
+                    if field_layout and field_layout.count() > 0:
+                        widget = field_layout.itemAt(0).widget()
+                        if widget:
+                            widget.setText(case_url)
+        print(f"Added new case tab '{tab_name}' with info and {len(observables)} observables.")
 
     def show_getting_started(self):
         dialog = GettingStarted()
