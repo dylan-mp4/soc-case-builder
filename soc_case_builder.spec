@@ -33,7 +33,9 @@ a = Analysis(
         'enchant',
         'enchant.checker',
         'enchant.tokenize',
-        're'
+        're',
+        'Flask',
+        'flask_cors'
     ],
     hookspath=[],
     runtime_hooks=[],
