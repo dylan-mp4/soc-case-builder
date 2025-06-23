@@ -12,16 +12,27 @@ from ui.getting_started import GettingStarted
 from ui.search_cases import SearchCases
 from ui.query_builder_dialog import QueryBuilderDialog
 from ui.bulk_add_entities_dialog import BulkAddEntitiesDialog
+import threading
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from PyQt6.QtCore import pyqtSignal
+
+flask_main_window = None
 
 class CaseBuilderWindow(QMainWindow):
+    add_case_signal = pyqtSignal(dict)
+
     def __init__(self):
         super().__init__()
+        global flask_main_window
+        flask_main_window = self
+        self.add_case_signal.connect(self._add_case_from_api)
+
         self.settings_dialog = SettingsDialog()
         if self.settings_dialog.load_settings():
             self.show_getting_started()
 
         self.setWindowTitle(f"SOC Case Builder v{__version__}")
-
         # Get screen dimensions
         screen = QGuiApplication.primaryScreen().geometry()
         self.setGeometry(0, 0, screen.width() // 2, screen.height()-100)
@@ -34,6 +45,71 @@ class CaseBuilderWindow(QMainWindow):
         self.create_menu()
         self.case_builder_tab = CaseBuilderTab(self.settings_dialog)
         self.central_widget.addTab(self.case_builder_tab, "Case 1")
+
+        self.start_flask_server()
+
+    def start_flask_server(self):
+        app = Flask(__name__)
+        CORS(app)
+
+        @app.route('/receive', methods=['POST'])
+        def receive():
+            data = request.get_json()
+            print(f"Raw Recieved data: {data}")  # Debug print
+            original_event_str = data.get("original-event", "")
+            try:
+                original_event = json.loads(original_event_str)
+            except Exception as e:
+                print("Failed to parse original-event JSON:", e)
+                original_event = {}
+            print(f"Received data: {original_event}")
+            # Use the global reference to call the method
+            if flask_main_window:
+                flask_main_window.add_case_from_api(original_event)
+            return jsonify({"status": "received"})
+
+        threading.Thread(target=lambda: app.run(port=5000, debug=False, use_reloader=False), daemon=True).start()
+
+    def add_case_from_api(self, event_dict):
+        print("add_case_from_api called!")
+        self.add_case_signal.emit(event_dict)
+
+    def _add_case_from_api(self, event_dict):
+        print("_add_case_from_api called!")
+        new_tab = CaseBuilderTab(self.settings_dialog)
+        self.central_widget.addTab(new_tab, f"Case {self.central_widget.count() + 1}")
+        self.central_widget.setCurrentWidget(new_tab)
+        new_tab.escalation_rb.setChecked(True)
+        new_tab.toggle_fields()
+        # Set info text if present
+        info_text = event_dict.get("info", "")
+        new_tab.escalation_info.setPlainText(info_text)
+        # Add observables as regular entities (fields)
+        observables = event_dict.get("observables", [])
+        for obs in observables:
+            obs_type = obs.get("observable-type", "Other")
+            obs_value = obs.get("observable", "")
+            # Replace 'user' with 'Username' and 'Mailbox' with 'E-mail'
+            if obs_type.lower() == "user":
+                label = "Username:"
+            elif obs_type.lower() == "mailbox":
+                label = "E-mail:"
+            elif obs_type in ("ipv4_public", "ipv6_public", "IP", "ip", "Ip"):
+                label = "IP:"
+            else:
+                label = f"{obs_type.capitalize()}:"
+            if obs_value:
+                new_tab.add_field(label, new_tab.common_fields_layout)
+                pos = new_tab.entity_positions.get(label)
+                if pos is not None:
+                    field_item = new_tab.common_fields_layout.itemAt(pos, QFormLayout.ItemRole.FieldRole)
+                    if field_item:
+                        field_layout = field_item.layout()
+                        if field_layout and field_layout.count() > 0:
+                            widget = field_layout.itemAt(0).widget()
+                            if widget:
+                                widget.setText(obs_value)
+        print(f"Added new case tab with info and {len(observables)} observables.")
 
     def show_getting_started(self):
         dialog = GettingStarted()
