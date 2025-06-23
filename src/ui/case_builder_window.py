@@ -256,7 +256,7 @@ class CaseBuilderWindow(QMainWindow):
                                         case_data["fields"].append({"label": label, "value": text})
 
                 # Save custom entities
-                for name_edit, value_edit, _ in current_tab.custom_entities:
+                for name_edit, value_edit, *_ in current_tab.custom_entities:
                     name = name_edit.text()
                     value = value_edit.text()
                     if name and value:
