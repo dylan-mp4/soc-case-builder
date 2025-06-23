@@ -75,7 +75,11 @@ class BulkAddEntitiesDialog(QDialog):
 
     def detect_entity_type(self, value):
         # Simple regex-based detection (expand as needed)
-        if re.match(r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", value):
+        ipv4_pattern = r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"
+        ipv6_pattern = r"^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:){1,7}:$|^([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}$"
+        if re.match(ipv4_pattern, value):
+            return "IP"
+        elif re.match(ipv6_pattern, value):
             return "IP"
         elif re.match(r"^(?:[a-fA-F0-9]{32}|[a-fA-F0-9]{40}|[a-fA-F0-9]{64})$", value):
             return "Hash"
