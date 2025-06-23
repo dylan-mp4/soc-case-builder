@@ -20,3 +20,5 @@ setuptools==78.1.1
 six==1.17.0
 tzdata==2025.1
 urllib3==2.5.0
+Flask==3.1.1
+flask-cors==6.0.1
