@@ -37,7 +37,15 @@ def prompt_and_update_if_needed(current_version):
             )
             if reply == QMessageBox.StandardButton.Yes:
                 updater_path = os.path.join(os.path.dirname(__file__), "updater.py")
-                subprocess.Popen([sys.executable, updater_path, download_url])
+                if getattr(sys, 'frozen', False):
+                    # Running as bundled app: use the updater as a script with the bundled python
+                    updater_exe = sys.executable  # This is soc_case_builder.exe
+                    # The updater script path must be absolute and inside the bundle
+                    updater_path = os.path.join(os.path.dirname(sys.executable), 'utils', 'updater.py')
+                    subprocess.Popen([updater_exe, updater_path, download_url])
+                else:
+                    # Running from source
+                    subprocess.Popen([sys.executable, updater_path, download_url])
                 sys.exit(0)
                 return True 
     return False
