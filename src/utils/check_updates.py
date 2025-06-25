@@ -26,7 +26,7 @@ def prompt_and_update_if_needed(current_version):
             latest_tuple = normalize_version(latest_version)
         except Exception as e:
             print("Version normalization failed:", e)
-            return
+            return False
         if latest_tuple > current_tuple:
             from PyQt6.QtWidgets import QMessageBox
             reply = QMessageBox.question(
@@ -39,6 +39,8 @@ def prompt_and_update_if_needed(current_version):
                 updater_path = os.path.join(os.path.dirname(__file__), "updater.py")
                 subprocess.Popen([sys.executable, updater_path, download_url])
                 sys.exit(0)
+                return True 
+    return False
 
 def normalize_version(version):
     # Remove leading 'v' or 'V' and split into tuple of ints

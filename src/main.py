@@ -34,10 +34,10 @@ def apply_saved_theme(app):
 
 def main():
     app = QApplication(sys.argv)
-    # app.setFont(QFont("Segoe UI", 10))
     apply_saved_theme(app)
     # Check for updates and prompt if needed
-    prompt_and_update_if_needed(get_version())
+    if prompt_and_update_if_needed(get_version()):
+        return  # Exit early if update was triggered
     window = CaseBuilderWindow()
     window.show()
     sys.exit(app.exec())
