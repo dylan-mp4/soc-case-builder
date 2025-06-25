@@ -2,6 +2,17 @@
 
 block_cipher = None
 
+# --- Custom code: create a runtime hook file before Analysis ---
+with open('add_bundle_paths.py', 'w') as f:
+    f.write(
+        "import sys, os\n"
+        "bundle_dir = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))\n"
+        "for subdir in ['resources', 'utils', 'ui']:\n"
+        "    path = os.path.join(bundle_dir, subdir)\n"
+        "    if os.path.isdir(path) and path not in sys.path:\n"
+        "        sys.path.insert(0, path)\n"
+    )
+
 a = Analysis(
     ['src/main.py'],
     binaries=[],
@@ -37,7 +48,7 @@ a = Analysis(
         'flask_cors'
     ],
     hookspath=[],
-    runtime_hooks=[],
+    runtime_hooks=['add_bundle_paths.py'],
     excludes=[],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -70,21 +81,3 @@ coll = COLLECT(
     upx_exclude=[],
     name='soc_case_builder',
 )
-
-# --- ADD THIS PATCH FOR RELIABLE IMPORTS IN BUNDLED MODE ---
-# Ensure the resources and utils folders are at the top level of the bundle
-# and add a runtime hook to set sys.path at runtime
-
-# Create a runtime hook file to add the bundled directories to sys.path
-with open('add_bundle_paths.py', 'w') as f:
-    f.write(
-        "import sys, os\n"
-        "bundle_dir = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))\n"
-        "for subdir in ['resources', 'utils', 'ui']:\n"
-        "    path = os.path.join(bundle_dir, subdir)\n"
-        "    if os.path.isdir(path) and path not in sys.path:\n"
-        "        sys.path.insert(0, path)\n"
-    )
-
-# Add the runtime hook to the Analysis
-a.runtime_hooks.append('add_bundle_paths.py')
