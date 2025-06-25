@@ -1,15 +1,22 @@
-import json
 import sys
 import os
+import json
+
+# Add bundled resource folders to sys.path if running as a PyInstaller bundle
+if getattr(sys, 'frozen', False):
+    bundle_dir = sys._MEIPASS
+    for subdir in ['resources', 'utils', 'ui']:
+        path = os.path.join(bundle_dir, subdir)
+        if os.path.isdir(path) and path not in sys.path:
+            sys.path.insert(0, path)
+else:
+    # Development: add project root to sys.path
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+    sys.path.append(root_dir)
+
 from PyQt6.QtWidgets import QApplication
-# from PyQt6.QtGui import QFont
 from ui.case_builder_window import CaseBuilderWindow
-
-# Dynamically add the root directory to sys.path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
-sys.path.append(root_dir)
-
 from resources.get_version import get_version
 from utils.check_updates import prompt_and_update_if_needed
 
