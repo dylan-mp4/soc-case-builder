@@ -17,11 +17,10 @@ a = Analysis(
     ['src/main.py'],
     binaries=[],
     datas=[
-        ('src/resources/version.py', 'resources'),
-        ('src/resources/__init__.py', 'resources'),
-        ('src/ui/*.py', 'ui'),
-        ('src/utils/*.py', 'utils'),
-        ('src/assets', '_internal/assets')
+        ('src/resources', 'resources'),
+        ('src/ui', 'ui'),
+        ('src/utils', 'utils'),
+        ('src/assets', 'assets')
     ],
     hiddenimports=[
         'certifi',
