@@ -37,7 +37,8 @@ def main():
     apply_saved_theme(app)
     # Check for updates and prompt if needed
     if prompt_and_update_if_needed(get_version()):
-        return  # Exit early if update was triggered
+        sys.exit(0) # Exit if update was triggered
+        return # not reached, but for clarity
     window = CaseBuilderWindow()
     window.show()
     sys.exit(app.exec())

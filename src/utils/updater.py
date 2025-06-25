@@ -2,9 +2,8 @@ import sys
 import os
 import time
 import requests
-import zipfile
-import shutil
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QProgressBar
+from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QProgressBar, QMessageBox
+import subprocess
 
 class UpdateWindow(QWidget):
     def __init__(self, total_size):
@@ -30,6 +29,7 @@ def main():
     download_url = sys.argv[1]
     app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     zip_path = os.path.join(app_dir, "update.zip")
+    batch_path = os.path.join(app_dir, "update.bat")
 
     # Get file size for progress bar
     resp = requests.head(download_url, allow_redirects=True)
@@ -48,35 +48,36 @@ def main():
                     f.write(chunk)
                     downloaded += len(chunk)
                     win.update_progress(downloaded)
-    win.label.setText("Extracting update...")
+    win.label.setText("Preparing update finalizer...")
     win.progress.setMaximum(0)
     QApplication.processEvents()
 
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall(app_dir)
-    os.remove(zip_path)
-    extracted_dir = os.path.join(app_dir, "soc_case_builder")
-    if os.path.isdir(extracted_dir):
-        for item in os.listdir(extracted_dir):
-            s = os.path.join(extracted_dir, item)
-            d = os.path.join(app_dir, item)
-            if os.path.isdir(s):
-                if os.path.exists(d):
-                    shutil.rmtree(d)
-                shutil.move(s, d)
-            else:
-                shutil.move(s, d)
-        shutil.rmtree(extracted_dir)
-    win.label.setText("Update complete. Restarting app...")
+    # Write the batch file to disk
+    batch_contents = r"""@echo off
+timeout /t 2 >nul
+powershell -Command "Expand-Archive -Path '%~1' -DestinationPath '%~2' -Force"
+del "%~1"
+start "" "%~2\soc_case_builder\soc_case_builder.exe"
+"""
+    try:
+        with open(batch_path, "w") as bf:
+            bf.write(batch_contents)
+    except Exception as e:
+        QMessageBox.critical(win, "Update Failed", f"Could not write batch file:\n{e}")
+        sys.exit(1)
+
+    win.label.setText("Launching update finalizer...")
     QApplication.processEvents()
     time.sleep(1)
-    # Restart the correct entry point depending on how the app is run
-    if getattr(sys, 'frozen', False):
-        exe_path = os.path.join(app_dir, "soc_case_builder.exe")
-        os.execv(exe_path, [exe_path])
-    else:
-        main_py = os.path.join(app_dir, "src", "main.py")
-        os.execv(sys.executable, [sys.executable, main_py])
+
+    # Launch the batch file and exit
+    try:
+        subprocess.Popen(['cmd', '/c', batch_path, zip_path, app_dir])
+    except Exception as e:
+        QMessageBox.critical(win, "Update Failed", f"Could not launch batch file:\n{e}")
+        sys.exit(1)
+
+    sys.exit(0)
 
 if __name__ == "__main__":
     time.sleep(2)

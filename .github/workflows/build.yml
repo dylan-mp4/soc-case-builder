@@ -48,11 +48,19 @@ jobs:
           $version = Select-String -Path src/resources/version.py -Pattern '__version__\s*=\s*"(.*)"' | ForEach-Object { $_.Matches[0].Groups[1].Value }
           echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Build executable with PyInstaller
+      - name: Build soc_case_builder.exe with PyInstaller
         run: |
           .venv\Scripts\pyinstaller soc_case_builder.spec
 
-      - name: Zip the executable
+      - name: Build updater.exe with PyInstaller
+        run: |
+          .venv\Scripts\pyinstaller updater.spec
+
+      - name: Copy updater.exe to dist/soc_case_builder
+        run: |
+          Copy-Item -Path dist\updater\updater.exe -Destination dist\soc_case_builder\updater.exe
+
+      - name: Zip the executable and updater
         run: |
           powershell Compress-Archive -Path dist/soc_case_builder -DestinationPath dist/soc_case_builder.zip
 

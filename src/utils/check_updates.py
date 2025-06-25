@@ -1,6 +1,4 @@
 import requests
-import tempfile
-import zipfile
 import subprocess
 import sys
 import os
@@ -15,6 +13,16 @@ def get_latest_release_info():
         if asset["name"].endswith(".zip"):
             return version, asset["browser_download_url"]
     return None, None
+
+def launch_updater(download_url):
+    if getattr(sys, 'frozen', False):
+        # Bundled: updater.exe is next to soc_case_builder.exe
+        updater_exe = os.path.join(os.path.dirname(sys.executable), 'updater.exe')
+        subprocess.Popen([updater_exe, download_url])
+    else:
+        # Source: run updater.py with python
+        updater_path = os.path.join(os.path.dirname(__file__), "updater.py")
+        subprocess.Popen([sys.executable, updater_path, download_url])
 
 def prompt_and_update_if_needed(current_version):
     latest_version, download_url = get_latest_release_info()
@@ -36,18 +44,9 @@ def prompt_and_update_if_needed(current_version):
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if reply == QMessageBox.StandardButton.Yes:
-                updater_path = os.path.join(os.path.dirname(__file__), "updater.py")
-                if getattr(sys, 'frozen', False):
-                    # Running as bundled app: use the updater as a script with the bundled python
-                    updater_exe = sys.executable  # This is soc_case_builder.exe
-                    # The updater script path must be absolute and inside the bundle
-                    updater_path = os.path.join(os.path.dirname(sys.executable), 'utils', 'updater.py')
-                    subprocess.Popen([updater_exe, updater_path, download_url])
-                else:
-                    # Running from source
-                    subprocess.Popen([sys.executable, updater_path, download_url])
+                launch_updater(download_url)
                 sys.exit(0)
-                return True 
+                return True
     return False
 
 def normalize_version(version):
