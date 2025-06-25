@@ -28,7 +28,7 @@ def main():
         sys.exit(1)
     download_url = sys.argv[1]
     app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    zip_path = os.path.join(app_dir, "update.zip")
+    zip_path = os.path.join(os.path.dirname(sys.executable), "update.zip")
     batch_path = os.path.join(os.path.dirname(sys.executable), "update.bat")
 
     # Get file size for progress bar
@@ -57,7 +57,7 @@ def main():
 timeout /t 2 >nul
 powershell -Command "Expand-Archive -Path '%~1' -DestinationPath '%~2' -Force"
 del "%~1"
-start "" "%~2\soc_case_builder.exe"
+start "" "%~2\soc_case_builder\soc_case_builder.exe"
 """
     try:
         with open(batch_path, "w") as bf:
