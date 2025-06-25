@@ -29,7 +29,7 @@ def main():
     download_url = sys.argv[1]
     app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     zip_path = os.path.join(app_dir, "update.zip")
-    batch_path = os.path.join(app_dir, "update.bat")
+    batch_path = os.path.join(os.path.dirname(sys.executable), "update.bat")
 
     # Get file size for progress bar
     resp = requests.head(download_url, allow_redirects=True)
@@ -38,7 +38,7 @@ def main():
     app = QApplication(sys.argv)
     win = UpdateWindow(total_size)
 
-    print("Downloading update...")
+    win.label.setText("Downloading update...")
     downloaded = 0
     with requests.get(download_url, stream=True) as r:
         r.raise_for_status()
@@ -48,7 +48,7 @@ def main():
                     f.write(chunk)
                     downloaded += len(chunk)
                     win.update_progress(downloaded)
-    win.label.setText("Preparing update finalizer...")
+    win.label.setText("Download Complete. Preparing to update...")
     win.progress.setMaximum(0)
     QApplication.processEvents()
 
@@ -57,13 +57,13 @@ def main():
 timeout /t 2 >nul
 powershell -Command "Expand-Archive -Path '%~1' -DestinationPath '%~2' -Force"
 del "%~1"
-start "" "%~2\soc_case_builder\soc_case_builder.exe"
+start "" "%~2\soc_case_builder.exe"
 """
     try:
         with open(batch_path, "w") as bf:
             bf.write(batch_contents)
     except Exception as e:
-        QMessageBox.critical(win, "Update Failed", f"Could not write batch file:\n{e}")
+        QMessageBox.critical(win, "Update Failed", f"Could not finalize update:\n\n{e}")
         sys.exit(1)
 
     win.label.setText("Launching update finalizer...")
@@ -74,7 +74,7 @@ start "" "%~2\soc_case_builder\soc_case_builder.exe"
     try:
         subprocess.Popen(['cmd', '/c', batch_path, zip_path, app_dir])
     except Exception as e:
-        QMessageBox.critical(win, "Update Failed", f"Could not launch batch file:\n{e}")
+        QMessageBox.critical(win, "Update Failed", f"Could not launch batch file:\n\n{e}")
         sys.exit(1)
 
     sys.exit(0)
