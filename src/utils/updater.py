@@ -63,7 +63,7 @@ timeout /t 2 >nul
 del "%~1"
 echo Launching application...
 timeout /t 2 >nul
-start "" "%~2\soc_case_builder.exe"
+start "" "%~2\soc_case_builder\soc_case_builder.exe"
 """
     try:
         with open(batch_path, "w") as bf:
