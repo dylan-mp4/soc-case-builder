@@ -55,9 +55,16 @@ def main():
     # Write the batch file to disk
     batch_contents = r"""@echo off
 timeout /t 2 >nul
+echo Updating application...
+pause
 powershell -Command "Expand-Archive -Path '%~1' -DestinationPath '%~2' -Force"
+echo Update complete. Cleaning up...
+pause
 del "%~1"
+echo Launching application...
+pause
 start "" "%~2\soc_case_builder\soc_case_builder.exe"
+pause
 """
     try:
         with open(batch_path, "w") as bf:
