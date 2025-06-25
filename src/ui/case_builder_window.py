@@ -3,7 +3,7 @@ import os
 import re
 from datetime import datetime
 from PyQt6.QtWidgets import QMainWindow, QTabWidget, QApplication, QInputDialog, QFormLayout, QLineEdit, QFileDialog
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QGuiApplication, QAction
 from resources.version import __version__
 from ui.case_builder_tab import CaseBuilderTab
@@ -15,7 +15,6 @@ from ui.bulk_add_entities_dialog import BulkAddEntitiesDialog
 import threading
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from PyQt6.QtCore import pyqtSignal
 
 flask_main_window = None
 
@@ -63,7 +62,7 @@ class CaseBuilderWindow(QMainWindow):
                 print("Failed to parse original-event JSON:", e)
                 original_event = {}
             # Merge outer fields into original_event
-            for key in ("case-url-link", "alert-title"):
+            for key in ("case-url-link", "alert-title", "organization"):
                 if key in data:
                     original_event[key] = data[key]
             print(f"Received data: {original_event}")
@@ -80,21 +79,28 @@ class CaseBuilderWindow(QMainWindow):
     def _add_case_from_api(self, event_dict):
         print("_add_case_from_api called!")
         new_tab = CaseBuilderTab(self.settings_dialog)
-        # Set tab name to alert-title if present
         tab_name = event_dict.get("alert-title", f"Case {self.central_widget.count() + 1}")
         self.central_widget.addTab(new_tab, tab_name)
         self.central_widget.setCurrentWidget(new_tab)
-        new_tab.escalation_rb.setChecked(True)
+        # Do NOT automatically select escalation flow; stay on close info flow
+        new_tab.close_case_rb.setChecked(True)
         new_tab.toggle_fields()
         # Set info text if present
         info_text = event_dict.get("info", "")
         new_tab.escalation_info.setPlainText(info_text)
-        # Add observables as regular entities (fields)
+        # Insert organisation into client text box and print it
+        organisation = event_dict.get("organization", "")
+        if organisation:
+            print(f"organization: {organisation}")
+            new_tab.client_combo.setCurrentText(organisation)
+            index = new_tab.client_combo.findText(organisation, Qt.MatchFlag.MatchFixedString)
+            if index != -1:
+                new_tab.client_combo.setCurrentIndex(index)
+        # Add observables as regular entities (fields), supporting multiples
         observables = event_dict.get("observables", [])
         for obs in observables:
             obs_type = obs.get("observable-type", "Other")
             obs_value = obs.get("observable", "")
-            # Replace 'user' with 'Username' and 'Mailbox' with 'E-mail'
             if obs_type.lower() == "user":
                 label = "Username:"
             elif obs_type.lower() == "mailbox":
@@ -104,6 +110,49 @@ class CaseBuilderWindow(QMainWindow):
             else:
                 label = f"{obs_type.capitalize()}:"
             if obs_value:
+                # Try to find an existing field for this label that is empty
+                found_empty = False
+                for i in range(new_tab.common_fields_layout.rowCount()):
+                    label_item = new_tab.common_fields_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
+                    field_item = new_tab.common_fields_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
+                    if label_item and field_item and label_item.widget().text() == label:
+                        field_layout = field_item.layout()
+                        if field_layout and field_layout.count() > 0:
+                            widget = field_layout.itemAt(0).widget()
+                            if widget and not widget.text():
+                                widget.setText(obs_value)
+                                found_empty = True
+                                break
+                if not found_empty:
+                    # If no empty field, add a new one
+                    new_tab.add_field(label, new_tab.common_fields_layout)
+                    pos = new_tab.entity_positions.get(label)
+                    if pos is not None:
+                        field_item = new_tab.common_fields_layout.itemAt(pos, QFormLayout.ItemRole.FieldRole)
+                        if field_item:
+                            field_layout = field_item.layout()
+                            if field_layout and field_layout.count() > 0:
+                                widget = field_layout.itemAt(0).widget()
+                                if widget:
+                                    widget.setText(obs_value)
+        # Handle Case Link
+        case_url = event_dict.get("case-url-link", "")
+        if case_url:
+            label = "Case Link:"
+            # Try to find an existing Case Link field that is empty
+            found_empty = False
+            for i in range(new_tab.common_fields_layout.rowCount()):
+                label_item = new_tab.common_fields_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
+                field_item = new_tab.common_fields_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
+                if label_item and field_item and label_item.widget().text() == label:
+                    field_layout = field_item.layout()
+                    if field_layout and field_layout.count() > 0:
+                        widget = field_layout.itemAt(0).widget()
+                        if widget and not widget.text():
+                            widget.setText(case_url)
+                            found_empty = True
+                            break
+            if not found_empty:
                 new_tab.add_field(label, new_tab.common_fields_layout)
                 pos = new_tab.entity_positions.get(label)
                 if pos is not None:
@@ -113,21 +162,7 @@ class CaseBuilderWindow(QMainWindow):
                         if field_layout and field_layout.count() > 0:
                             widget = field_layout.itemAt(0).widget()
                             if widget:
-                                widget.setText(obs_value)
-        # Add case-url-link as Case Link entity if present
-        case_url = event_dict.get("case-url-link", "")
-        if case_url:
-            label = "Case Link:"
-            new_tab.add_field(label, new_tab.common_fields_layout)
-            pos = new_tab.entity_positions.get(label)
-            if pos is not None:
-                field_item = new_tab.common_fields_layout.itemAt(pos, QFormLayout.ItemRole.FieldRole)
-                if field_item:
-                    field_layout = field_item.layout()
-                    if field_layout and field_layout.count() > 0:
-                        widget = field_layout.itemAt(0).widget()
-                        if widget:
-                            widget.setText(case_url)
+                                widget.setText(case_url)
         print(f"Added new case tab '{tab_name}' with info and {len(observables)} observables.")
 
     def show_getting_started(self):

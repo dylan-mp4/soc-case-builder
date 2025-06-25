@@ -93,6 +93,7 @@ class CaseBuilderTab(QWidget):
         self.escalation_layout = QFormLayout()
         self.close_layout = QFormLayout()
         self.client_combo = QComboBox()
+        self.client_combo.setEditable(True)
         self._load_clients()
         self.crux_field = PlainTextLineEdit()
         self.escalation_info = PopOutTextBox()
