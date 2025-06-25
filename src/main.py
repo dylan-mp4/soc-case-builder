@@ -4,13 +4,14 @@ import os
 from PyQt6.QtWidgets import QApplication
 # from PyQt6.QtGui import QFont
 from ui.case_builder_window import CaseBuilderWindow
-from resources.get_version import get_version
-from utils.check_updates import prompt_and_update_if_needed
 
 # Dynamically add the root directory to sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 sys.path.append(root_dir)
+
+from resources.get_version import get_version
+from utils.check_updates import prompt_and_update_if_needed
 
 def apply_saved_theme(app):
     settings_path = os.path.join(current_dir, 'settings.json')
