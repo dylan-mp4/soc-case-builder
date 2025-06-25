@@ -70,8 +70,13 @@ def main():
     win.label.setText("Update complete. Restarting app...")
     QApplication.processEvents()
     time.sleep(1)
-    exe_path = os.path.join(app_dir, "soc_case_builder.exe")
-    os.execv(exe_path, [exe_path])
+    # Restart the correct entry point depending on how the app is run
+    if getattr(sys, 'frozen', False):
+        exe_path = os.path.join(app_dir, "soc_case_builder.exe")
+        os.execv(exe_path, [exe_path])
+    else:
+        main_py = os.path.join(app_dir, "src", "main.py")
+        os.execv(sys.executable, [sys.executable, main_py])
 
 if __name__ == "__main__":
     time.sleep(2)
