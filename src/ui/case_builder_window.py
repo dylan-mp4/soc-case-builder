@@ -12,6 +12,7 @@ from ui.getting_started import GettingStarted
 from ui.search_cases import SearchCases
 from ui.query_builder_dialog import QueryBuilderDialog
 from ui.bulk_add_entities_dialog import BulkAddEntitiesDialog
+from ui.stats_for_nerds import StatsForNerds
 import threading
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -228,6 +229,10 @@ class CaseBuilderWindow(QMainWindow):
         bulk_add_action.triggered.connect(self.open_bulk_add_entities)
         menubar.addAction(bulk_add_action)
 
+        stats_action = QAction('Stats for Nerds', self)
+        stats_action.triggered.connect(self.open_stats_for_nerds)
+        menubar.addAction(stats_action)
+
     def open_search_cases(self):
         dialog = SearchCases(self)
         dialog.exec()
@@ -239,6 +244,11 @@ class CaseBuilderWindow(QMainWindow):
     def open_settings_dialog(self):
         self.settings_dialog.load_settings()  # Reload settings before showing the dialog
         self.settings_dialog.exec()
+
+    def open_stats_for_nerds(self):
+        print("Opening Stats for Nerds dialog...")  # Debug print
+        self.stats_dialog = StatsForNerds(self)
+        self.stats_dialog.show()
 
     def open_query_builder_dialog(self):
         dialog = QueryBuilderDialog(self)
