@@ -2,9 +2,8 @@ import json
 import os
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QTextEdit, QPushButton, QListWidget, QHBoxLayout,
-    QLineEdit, QMessageBox, QListWidgetItem, QComboBox, QCheckBox, QWidget, QGridLayout
+    QLineEdit, QMessageBox, QCheckBox, QWidget, QGridLayout
 )
-from PyQt6.QtCore import Qt
 
 QUERY_FILE = "queries.json"
 ENTITY_TYPES = ["IP", "Domain", "Username", "Host", "URL", "Hash", "Role", "Location"]  # Extend as needed

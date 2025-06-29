@@ -1,7 +1,7 @@
 import os
 import json
 from datetime import datetime, timedelta
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QGroupBox, QFormLayout, QWidget
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QGroupBox, QFormLayout
 
 class StatsForNerds(QDialog):
     def __init__(self, parent=None):

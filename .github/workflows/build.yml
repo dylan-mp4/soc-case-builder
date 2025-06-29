@@ -25,7 +25,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .venv
-          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-venv-${{ hashFiles('dev_requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-venv-
 
@@ -35,7 +35,7 @@ jobs:
           if (!(Test-Path ".venv")) {
             python -m venv .venv
             .venv\Scripts\pip install --upgrade pip
-            .venv\Scripts\pip install -r requirements.txt
+            .venv\Scripts\pip install -r dev_requirements.txt
             .venv\Scripts\pip install pyinstaller
           } else {
             Write-Host "Reusing cached virtual environment"
