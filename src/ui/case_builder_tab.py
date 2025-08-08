@@ -170,17 +170,29 @@ class CaseBuilderTab(QWidget):
     def add_field(self, label, layout):
         field_layout = QHBoxLayout()
         line_edit = PlainTextLineEdit()
-        query_button = QPushButton("S")
-        query_button.setMaximumWidth(20)
+        # Query Finder button
+        query_button = QPushButton("🔨")
+        # query_button.setMaximumWidth(20)
+        query_button.setToolTip("Find queries related to this entity")
         query_button.clicked.connect(lambda: self.open_query_finder(label, line_edit.text()))
-        add_button = QPushButton("+")
-        add_button.setMaximumWidth(20)
+        # Search Cases button
+        search_cases_button = QPushButton("🔍")
+        search_cases_button.setToolTip("Search saved cases with similar entity")
+        # search_cases_button.setMaximumWidth(20)
+        search_cases_button.clicked.connect(lambda: self.open_similar_cases_search(label, line_edit.text()))
+        # Add Entity
+        add_button = QPushButton("➕")
+        add_button.setToolTip("Add another field of this entity")
+        # add_button.setMaximumWidth(20)
         add_button.clicked.connect(lambda: self.add_field(label, layout))
-        remove_button = QPushButton("x")
-        remove_button.setMaximumWidth(20)
+        # Remove Entity
+        remove_button = QPushButton("❌")
+        remove_button.setToolTip("Remove field")
+        # remove_button.setMaximumWidth(20)
         remove_button.clicked.connect(lambda: self.remove_field(label, layout, field_layout))
         field_layout.addWidget(line_edit)
         field_layout.addWidget(query_button)
+        field_layout.addWidget(search_cases_button)
         field_layout.addWidget(add_button)
         field_layout.addWidget(remove_button)
         if label not in self.entity_positions:
@@ -285,6 +297,16 @@ class CaseBuilderTab(QWidget):
         from ui.query_finder_dialog import QueryFinderDialog
         entity_type = label.rstrip(":")
         dialog = QueryFinderDialog(entity_type, value, self)
+        dialog.exec()
+        
+    def open_similar_cases_search(self, label, value):
+        from ui.search_cases import SearchCases
+        value = value.strip()
+        if not value:
+            QMessageBox.information(self, "Search Cases", "Enter a value to search for similar cases.")
+            return
+        # Use the top-level window as parent so loading a case works
+        dialog = SearchCases(self.window(), search_term=value, entity_label=label)
         dialog.exec()
 
     def clear_fields(self):

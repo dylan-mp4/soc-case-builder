@@ -4,11 +4,15 @@ import os
 import json
 
 class SearchCases(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, search_term=None, entity_label=None):
         super().__init__(parent)
         self.setWindowTitle("Search Cases")
         self.resize(800, 600)
-        
+
+        # Store optional initial search and label filter
+        self._initial_search_term = (search_term or "").strip()
+        self._entity_label_filter = (entity_label or "").strip()
+
         self.setWindowFlags(
             self.windowFlags() |
             Qt.WindowType.WindowMinimizeButtonHint |
@@ -34,23 +38,73 @@ class SearchCases(QDialog):
         self.results_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)  # Enable horizontal scrolling
         self.results_table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)    # Enable vertical scrolling
         layout.addWidget(self.results_table)
-        
+
         for i in range(5):  # Only visible columns
             self.results_table.setColumnWidth(i, 200)
 
         self.setLayout(layout)
 
+        # Pre-fill and run search if provided
+        if self._initial_search_term:
+            self.search_input.setText(self._initial_search_term)
+            self.search_cases()
+
     def search_cases(self):
-        search_term = self.search_input.text().lower()
+        search_term = self.search_input.text().lower().strip()
         logs_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
+        if not os.path.isdir(logs_dir):
+            self.results_table.setRowCount(0)
+            return
+
         case_files = [f for f in os.listdir(logs_dir) if f.endswith('.json')]
+
+        def case_matches(case_data: dict) -> bool:
+            # If filtering by entity label (e.g., "IP:"), only match if that label's value contains the term
+            if self._entity_label_filter:
+                for f in case_data.get("fields", []):
+                    try:
+                        label = str(f.get("label", "")).strip().lower()
+                        value = str(f.get("value", "")).lower()
+                        if label == self._entity_label_filter.strip().lower() and search_term in value:
+                            return True
+                    except Exception:
+                        continue
+                return False  # no match under label filter
+            # Otherwise, broad search across top-level, fields, and custom entities
+            # Top-level fields
+            for v in case_data.values():
+                try:
+                    if isinstance(v, str) and search_term in v.lower():
+                        return True
+                except Exception:
+                    pass
+            # 'fields' list
+            for f in case_data.get("fields", []):
+                try:
+                    if search_term in str(f.get("label", "")).lower() or search_term in str(f.get("value", "")).lower():
+                        return True
+                except Exception:
+                    pass
+            # 'custom_entities' list
+            for ce in case_data.get("custom_entities", []):
+                try:
+                    if search_term in str(ce.get("name", "")).lower() or search_term in str(ce.get("value", "")).lower():
+                        return True
+                except Exception:
+                    pass
+            return False
 
         results = []
         for case_file in case_files:
-            with open(os.path.join(logs_dir, case_file), 'r') as file:
-                case_data = json.load(file)
-                if any(search_term in str(value).lower() for value in case_data.values()):
-                    results.append((case_file, case_data))
+            try:
+                with open(os.path.join(logs_dir, case_file), 'r', encoding='utf-8') as file:
+                    case_data = json.load(file)
+                    if not search_term:
+                        continue
+                    if case_matches(case_data):
+                        results.append((case_file, case_data))
+            except Exception:
+                continue
 
         if results:
             # Get all unique keys from the JSON data
@@ -88,7 +142,9 @@ class SearchCases(QDialog):
             if 'timestamp' in all_keys:
                 timestamp_col = all_keys.index('timestamp')
                 self.results_table.sortItems(timestamp_col, Qt.SortOrder.DescendingOrder)
-                
+        else:
+            self.results_table.setRowCount(0)
+
     def load_case(self, row, column):
         file_path = self.results_table.item(row, self.results_table.columnCount() - 1).text()  # Get the file path from the last column
         logs_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
