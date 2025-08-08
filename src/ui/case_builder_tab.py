@@ -404,9 +404,10 @@ class CaseBuilderTab(QWidget):
         final_text.extend(custom_entities_text)
         final_text.extend(other_fields_text)
         if self.escalation_rb.isChecked():
-            sign_off_user = self.settings_tab.settings_sign_off_user.text()
-            if sign_off_user:
-                final_text.append(f"\nKind Regards,\n{sign_off_user},")
+            full_name = self.settings_tab.settings_sign_off_user.text().strip()
+            first_name = full_name.split()[0] if full_name else ""
+            if first_name:
+                final_text.append(f"\nKind Regards,\n{first_name},")
             sign_off_org = self.settings_tab.settings_sign_off_org.text()
             if sign_off_org:
                 final_text.append(f"{sign_off_org}")
