@@ -1,9 +1,11 @@
+import os
 import re
 import csv
 import json
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QScrollArea, QLineEdit, QPushButton,
-    QRadioButton, QButtonGroup, QComboBox, QHBoxLayout, QTabWidget, QMessageBox
+    QRadioButton, QButtonGroup, QComboBox, QHBoxLayout, QTabWidget, QMessageBox,
+    QDialog, QDialogButtonBox, QTextEdit, QLabel, QInputDialog
 )
 from utils.api_requests import get_abuse_info, get_domain_info, get_hash_info, get_url_info
 from utils.spell_check import SpellTextEdit
@@ -103,9 +105,36 @@ class CaseBuilderTab(QWidget):
         self.escalation_layout.addRow("Crux:", self.crux_field)
         self.escalation_layout.addRow("Information:", self.escalation_info)
         self.close_reason = PopOutTextBox()
-        self.close_info = PopOutTextBox()
+        # self.close_info = PopOutTextBox()
         self.close_layout.addRow("Reason:", self.close_reason)
-        self.close_layout.addRow("Information:", self.close_info)
+
+        # Quick Comment picker with Add/Remove controls
+        self.quick_comment_combo = QComboBox()
+        self.quick_comment_combo.addItem("Insert quick comment...")  # placeholder
+        for c in self._get_default_quick_comments():
+            self.quick_comment_combo.addItem(c)
+        self.quick_comment_combo.activated.connect(self._on_quick_comment_selected)
+
+        qc_row = QWidget()
+        qc_row_layout = QHBoxLayout(qc_row)
+        qc_row_layout.setContentsMargins(0, 0, 0, 0)
+        qc_row_layout.addWidget(self.quick_comment_combo)
+
+        self.qc_add_btn = QPushButton("Add")
+        self.qc_add_btn.setMaximumWidth(80)
+        self.qc_add_btn.setToolTip("Add a new quick comment")
+        self.qc_add_btn.clicked.connect(self._add_quick_comment)
+        qc_row_layout.addWidget(self.qc_add_btn)
+
+        self.qc_remove_btn = QPushButton("Remove")
+        self.qc_remove_btn.setMaximumWidth(80)
+        self.qc_remove_btn.setToolTip("Remove a saved quick comment")
+        self.qc_remove_btn.clicked.connect(self._remove_selected_quick_comment)
+        qc_row_layout.addWidget(self.qc_remove_btn)
+
+        self.close_layout.addRow("Quick Comment:", qc_row)
+
+        # self.close_layout.addRow("Information:", self.close_info)
         self.additional_info_layout.addLayout(self.escalation_layout)
         self.additional_info_layout.addLayout(self.close_layout)
         self.case_builder_layout.addLayout(self.additional_info_layout)
@@ -344,7 +373,7 @@ class CaseBuilderTab(QWidget):
         self.sign_off_user.clear()
         self.sign_off_org.clear()
         self.close_reason.clear()
-        self.close_info.clear()
+        # self.close_info.clear()
         self.output_text.clear()
         self.scroll_content.adjustSize()
         self.scroll_area.setWidget(self.scroll_content)
@@ -359,7 +388,8 @@ class CaseBuilderTab(QWidget):
             reason = self.close_reason.toPlainText()
             if reason:
                 final_text.append(f"{reason}\n")
-            info = self.close_info.toPlainText()
+            info = ""
+            # info =self.close_info.toPlainText()
             if info:
                 final_text.append(f"{info}\n")
         else:
@@ -412,3 +442,111 @@ class CaseBuilderTab(QWidget):
             if sign_off_org:
                 final_text.append(f"{sign_off_org}")
         self.output_text.setPlainText("\n".join(final_text))
+
+    def _settings_path(self) -> str:
+        # src/ui -> src/settings.json
+        return os.path.join(os.path.dirname(os.path.dirname(__file__)), "settings.json")
+
+    def _load_quick_comments_from_settings(self) -> list[str]:
+        try:
+            with open(self._settings_path(), "r", encoding="utf-8") as f:
+                data = json.load(f)
+            comments = data.get("quick_comments")
+            if isinstance(comments, list):
+                # coerce to strings
+                return [str(c) for c in comments if str(c).strip()]
+        except Exception:
+            pass
+        # Fallback defaults
+        return [
+            "No indicators of compromise identified; closing as benign.",
+            "False positive caused by known safe domain.",
+            "User-confirmed legitimate activity; no further action required.",
+            "Phishing simulation; no action needed.",
+            "No further alerts observed; monitoring concluded."
+        ]
+
+    def _save_quick_comments_to_settings(self, comments: list[str]) -> None:
+        path = self._settings_path()
+        try:
+            # Load existing settings to preserve other fields
+            data = {}
+            if os.path.isfile(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    try:
+                        data = json.load(f) or {}
+                    except Exception:
+                        data = {}
+            data["quick_comments"] = comments
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
+        except Exception as e:
+            QMessageBox.warning(self, "Save Error", f"Failed to save quick comments.\n{e}")
+
+    def _get_default_quick_comments(self):
+        return self._load_quick_comments_from_settings()
+
+    def _on_quick_comment_selected(self, index: int):
+        if index <= 0:
+            return
+        comment = self.quick_comment_combo.itemText(index).strip()
+        if not comment:
+            return
+        current = self.close_reason.toPlainText().strip()
+        new_text = comment if not current else f"{current}\n{comment}"
+        self.close_reason.setPlainText(new_text)
+        self.quick_comment_combo.setCurrentIndex(0)
+
+    def _add_quick_comment(self):
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Add Quick Comment")
+        v = QVBoxLayout(dlg)
+        v.addWidget(QLabel("Enter quick comment:", dlg))
+        editor = QTextEdit(dlg)
+        editor.setAcceptRichText(False)
+        editor.setMinimumSize(500, 200)
+        v.addWidget(editor)
+        btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=dlg)
+        v.addWidget(btns)
+        btns.accepted.connect(dlg.accept)
+        btns.rejected.connect(dlg.reject)
+
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        comment = editor.toPlainText().strip()
+        if not comment:
+            return
+        
+        existing = [self.quick_comment_combo.itemText(i) for i in range(1, self.quick_comment_combo.count())]
+        if comment in existing:
+            QMessageBox.information(self, "Quick Comments", "This quick comment already exists.")
+            return
+        self.quick_comment_combo.addItem(comment)
+        self._save_quick_comments_to_settings(existing + [comment])
+        self.quick_comment_combo.setCurrentIndex(0)
+
+    def _remove_selected_quick_comment(self):
+        items = [self.quick_comment_combo.itemText(i) for i in range(1, self.quick_comment_combo.count())]
+        if not items:
+            QMessageBox.information(self, "Quick Comments", "There are no quick comments to remove.")
+            return
+        choice, ok = QInputDialog.getItem(
+            self, "Remove Quick Comment", "Select quick comment to remove:", items, 0, False
+        )
+        if not ok or not choice:
+            return
+        # Find and remove chosen item by text
+        remove_idx = None
+        for i in range(1, self.quick_comment_combo.count()):
+            if self.quick_comment_combo.itemText(i) == choice:
+                remove_idx = i
+                break
+        if remove_idx is None:
+            return
+        self.quick_comment_combo.removeItem(remove_idx)
+        # Persist remaining comments
+        remaining = [self.quick_comment_combo.itemText(i) for i in range(1, self.quick_comment_combo.count())]
+        self._save_quick_comments_to_settings(remaining)
+        # Ensure placeholder remains selected
+        self.quick_comment_combo.setCurrentIndex(0)

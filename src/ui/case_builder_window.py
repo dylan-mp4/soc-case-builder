@@ -328,7 +328,7 @@ class CaseBuilderWindow(QMainWindow):
                     "crux": current_tab.crux_field.text(),
                     "escalation_info": current_tab.escalation_info.toPlainText(),
                     "close_reason": current_tab.close_reason.toPlainText(),
-                    "close_info": current_tab.close_info.toPlainText(),
+                    # "close_info": current_tab.close_info.toPlainText(),
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
 
@@ -363,6 +363,7 @@ class CaseBuilderWindow(QMainWindow):
                 filepath = os.path.join(logs_dir, filename)
                 with open(filepath, "w") as file:
                     json.dump(case_data, file, indent=4)
+                    
     def save_all_cases(self):
         for i in range(self.central_widget.count()):
             current_tab = self.central_widget.widget(i)
@@ -376,7 +377,7 @@ class CaseBuilderWindow(QMainWindow):
                     "crux": current_tab.crux_field.text(),
                     "escalation_info": current_tab.escalation_info.toPlainText(),
                     "close_reason": current_tab.close_reason.toPlainText(),
-                    "close_info": current_tab.close_info.toPlainText(),
+                    # "close_info": current_tab.close_info.toPlainText(),
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
 
@@ -436,7 +437,7 @@ class CaseBuilderWindow(QMainWindow):
                 new_tab.crux_field.setText(case_data.get("crux", ""))
                 new_tab.escalation_info.setPlainText(case_data.get("escalation_info", ""))
                 new_tab.close_reason.setPlainText(case_data.get("close_reason", ""))
-                new_tab.close_info.setPlainText(case_data.get("close_info", ""))
+                # new_tab.close_info.setPlainText(case_data.get("close_info", ""))
                 if case_data.get("route") == "escalation":
                     new_tab.escalation_rb.setChecked(True)
                 else:
