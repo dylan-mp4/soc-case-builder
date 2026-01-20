@@ -1,8 +1,8 @@
-import os
 import json
-import time
+import os
 import sqlite3
-from typing import Optional, Tuple, Dict, Any, List
+import time
+from typing import Any, Dict, List, Optional, Tuple
 
 from .api_requests import (
     get_abuse_info,
@@ -24,7 +24,15 @@ def _db_path() -> str:
 
 
 def _settings_path() -> str:
-    return os.path.join(_src_dir(), "settings.json")
+    """Return the preferred settings path.
+
+    Priority:
+    1) New Flet config at src/ui_flet/config/settings.json
+    2) Legacy settings.json at src/
+    """
+    flet_path = os.path.join(_src_dir(), "ui_flet", "config", "settings.json")
+    legacy_path = os.path.join(_src_dir(), "settings.json")
+    return flet_path if os.path.exists(flet_path) else legacy_path
 
 
 def _load_settings() -> Dict[str, Any]:

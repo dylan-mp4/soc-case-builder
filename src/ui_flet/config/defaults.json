@@ -1,0 +1,33 @@
+{
+  "user_name": "",
+  "org_name": "",
+  "abuse_api_key": "",
+  "vt_api_key": "",
+  "urlscan_api_key": "",
+  "urlscan_wait_time": 0,
+  "first_time": true,
+  "clients": [
+    "Fake Client 1",
+    "Fake Client 2",
+    "Fake Client 3"
+  ],
+  "entities": [
+    "Case Link",
+    "Username",
+    "Role",
+    "Location",
+    "Host",
+    "IP",
+    "Domain",
+    "Hash",
+    "URL"
+  ],
+  "custom_dict": [],
+  "entity_ttl_days": {
+    "ip": 90,
+    "domain": 7,
+    "hash": 14,
+    "url": 3,
+    "user_profile": 30
+  }
+}

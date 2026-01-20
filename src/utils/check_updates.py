@@ -1,7 +1,8 @@
-import requests
+import os
 import subprocess
 import sys
-import os
+
+import requests
 
 def get_latest_release_info():
     url = "https://api.github.com/repos/dylan-mp4/soc-case-builder/releases/latest"
@@ -25,28 +26,33 @@ def launch_updater(download_url):
         subprocess.Popen([sys.executable, updater_path, download_url])
 
 def prompt_and_update_if_needed(current_version):
-    latest_version, download_url = get_latest_release_info()
-    if latest_version:
-        print(f"Current version: v{current_version}, Latest version: {latest_version}")
-        # Normalize both versions for comparison
-        try:
-            current_tuple = normalize_version(current_version)
-            latest_tuple = normalize_version(latest_version)
-        except Exception as e:
-            print("Version normalization failed:", e)
-            return False
-        if latest_tuple > current_tuple:
-            from PyQt6.QtWidgets import QMessageBox
-            reply = QMessageBox.question(
-                None,
-                "Update Available",
-                f"A new version ({latest_version}) is available. Update now?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-            if reply == QMessageBox.StandardButton.Yes:
-                launch_updater(download_url)
-                sys.exit(0)
-                return True
+    """Check for updates and optionally launch updater.
+
+    Flet UI replacement: no GUI prompt; logs to console only.
+    Returns False to continue app startup.
+    """
+    try:
+        latest_version, download_url = get_latest_release_info()
+    except Exception as e:
+        print("Update check failed:", e)
+        return False
+
+    if not latest_version:
+        return False
+
+    print(f"Current version: v{current_version}, Latest version: {latest_version}")
+
+    try:
+        current_tuple = normalize_version(current_version)
+        latest_tuple = normalize_version(latest_version)
+    except Exception as e:
+        print("Version normalization failed:", e)
+        return False
+
+    if latest_tuple > current_tuple:
+        print("Update available. Skipping auto-update prompt in Flet environment.")
+        # To enable automatic update, uncomment below:
+        # launch_updater(download_url)
     return False
 
 def normalize_version(version):

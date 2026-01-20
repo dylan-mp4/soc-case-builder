@@ -1,6 +1,13 @@
-import requests
-import time
 import json
+import time
+
+import requests
+
+try:
+    # Prefer new Flet config path if available
+    from src.ui_flet.utils.config_manager import load_settings as load_flet_settings  # type: ignore
+except Exception:  # pragma: no cover - fallback for legacy environments
+    load_flet_settings = None
 
 def get_domain_info(domain):
     url = f'https://networkcalc.com/api/dns/lookup/{domain}'
@@ -112,9 +119,25 @@ def get_url_info(url, api_key):
         return f"Error fetching data: {response.status_code} - {response.reason}"
     
 def get_wait_time():
+    """Return URLScan wait time (seconds) from settings.
+
+    Order of preference:
+    1) New Flet config (src/ui_flet/config/settings.json)
+    2) Legacy settings.json in src/
+    3) Default fallback = 5 seconds
+    """
+    # New Flet settings
+    if load_flet_settings:
+        try:
+            settings = load_flet_settings()
+            return int(settings.get("urlscan_wait_time", 5))
+        except Exception:
+            pass
+
+    # Legacy settings.json at repo root
     try:
-        with open('settings.json', 'r') as f:
+        with open("settings.json", "r", encoding="utf-8") as f:
             settings = json.load(f)
-            return int(settings.get('urlscan_wait_time', 5))
+            return int(settings.get("urlscan_wait_time", 5))
     except (FileNotFoundError, json.JSONDecodeError, ValueError):
         return 5
