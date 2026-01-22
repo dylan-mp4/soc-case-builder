@@ -34,12 +34,21 @@ jobs:
         run: |
           if (!(Test-Path ".venv")) {
             python -m venv .venv
-            .venv\Scripts\pip install --upgrade pip
-            .venv\Scripts\pip install -r dev_requirements.txt
-            .venv\Scripts\pip install pyinstaller
-          } else {
-            Write-Host "Reusing cached virtual environment"
           }
+          .venv\Scripts\pip install --upgrade pip
+          .venv\Scripts\pip install -r dev_requirements.txt
+
+      - name: Verify PyQt6 installation
+        shell: pwsh
+        run: |
+          Write-Host "Verifying installed packages..."
+          .venv\Scripts\pip list | Select-String -Pattern "PyQt6|pyinstaller"
+          Write-Host "`nTesting PyQt6 import..."
+          .venv\Scripts\python -c "import PyQt6; print('PyQt6 imported successfully'); print('PyQt6 location:', PyQt6.__file__)"
+          Write-Host "`nPython site-packages location..."
+          .venv\Scripts\python -c "import site; print(site.getsitepackages())"
+          Write-Host "`nPyInstaller location..."
+          .venv\Scripts\python -c "import PyInstaller; print('PyInstaller location:', PyInstaller.__file__)"
 
       - name: Extract version from version.py
         id: get_version
@@ -49,8 +58,29 @@ jobs:
           echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Build soc_case_builder.exe with PyInstaller
+        shell: pwsh
         run: |
-          .venv\Scripts\pyinstaller soc_case_builder.spec
+          Write-Host "Building with PyInstaller..."
+          Write-Host "Python executable: $(.venv\Scripts\python -c 'import sys; print(sys.executable)')"
+          .venv\Scripts\python -m PyInstaller --clean soc_case_builder.spec
+
+      - name: Verify build output
+        shell: pwsh
+        run: |
+          Write-Host "Checking dist/soc_case_builder contents..."
+          Get-ChildItem -Path dist/soc_case_builder -Name
+          Write-Host "`nChecking dist/soc_case_builder/_internal contents (first 30)..."
+          if (Test-Path "dist/soc_case_builder/_internal") {
+            Get-ChildItem -Path dist/soc_case_builder/_internal -Name | Select-Object -First 30
+          } else {
+            Write-Host "_internal folder not found!"
+          }
+          Write-Host "`nChecking for PyQt6..."
+          if (Test-Path "dist/soc_case_builder/_internal/PyQt6") {
+            Write-Host "PyQt6 folder exists"
+          } else {
+            Write-Host "PyQt6 folder NOT found!"
+          }
 
       - name: Build updater.exe with PyInstaller
         run: |
