@@ -8,9 +8,19 @@ from PyQt6.QtWidgets import (
     QDialog, QDialogButtonBox, QTextEdit, QLabel, QInputDialog
 )
 from utils.api_requests import get_abuse_info, get_domain_info, get_hash_info, get_url_info
+from utils.entity_store import (
+    get_or_enrich_ip,
+    get_or_enrich_domain,
+    get_or_enrich_hash,
+    get_or_enrich_url,
+    upsert_full_user_profile,
+)
 from utils.spell_check import SpellTextEdit
 from ui.escalation_note import EscalationNoteDialog
 from ui.pop_out_text_edit import PopOutTextBox
+import requests
+import time
+from PyQt6.QtGui import QAction, QIcon, QPixmap, QPainter, QColor
 
 class PlainTextLineEdit(QLineEdit):
     def insertFromMimeData(self, source):
@@ -26,6 +36,8 @@ class CaseBuilderTab(QWidget):
         self.settings_tab = settings_tab
         self.entity_positions = {}
         self.custom_entities = []
+        # Map QLineEdit -> QAction (inline trailing icon) for enrichment status
+        self._status_actions = {}
 
         self._init_layouts()
         self._init_fields(initial_fields)
@@ -97,16 +109,21 @@ class CaseBuilderTab(QWidget):
         self.client_combo = QComboBox()
         self.client_combo.setEditable(True)
         self._load_clients()
-        self.crux_field = PlainTextLineEdit()
+        self.what_happen_field = PopOutTextBox()
+        # New field to hold compiled entity/context information for escalation route
+        self.additional_context_field = PopOutTextBox()
+        self.analyst_assessment = PopOutTextBox()
         self.escalation_info = PopOutTextBox()
         self.sign_off_user = PlainTextLineEdit()
         self.sign_off_org = PlainTextLineEdit()
         self.escalation_layout.addRow("Client:", self.client_combo)
-        self.escalation_layout.addRow("Crux:", self.crux_field)
-        self.escalation_layout.addRow("Information:", self.escalation_info)
+        self.escalation_layout.addRow("What's happening:", self.what_happen_field)
+        self.escalation_layout.addRow("Additional Context:", self.additional_context_field)
+        self.escalation_layout.addRow("Analyst Assessment:", self.analyst_assessment)
+        self.escalation_layout.addRow("Action Required:", self.escalation_info)
         self.close_reason = PopOutTextBox()
         # self.close_info = PopOutTextBox()
-        self.close_layout.addRow("Reason:", self.close_reason)
+        self.close_layout.addRow("Summary:", self.close_reason)
 
         # Quick Comment picker with Add/Remove controls
         self.quick_comment_combo = QComboBox()
@@ -187,6 +204,9 @@ class CaseBuilderTab(QWidget):
         is_escalation = self.escalation_rb.isChecked()
         self._toggle_form_layout(self.escalation_layout, is_escalation)
         self._toggle_form_layout(self.close_layout, not is_escalation)
+        # Hide compiled output box for escalation path (no longer used there)
+        if hasattr(self, 'output_text'):
+            self.output_text.setVisible(not is_escalation)
 
     def _toggle_form_layout(self, layout, visible):
         for i in range(layout.rowCount()):
@@ -199,6 +219,13 @@ class CaseBuilderTab(QWidget):
     def add_field(self, label, layout):
         field_layout = QHBoxLayout()
         line_edit = PlainTextLineEdit()
+        # Inline status indicator as trailing action (hidden by default)
+        status_action = QAction(self)
+        status_action.setVisible(False)
+        line_edit.addAction(status_action, QLineEdit.ActionPosition.TrailingPosition)
+        self._status_actions[line_edit] = status_action
+        # Connect to force refresh on trigger
+        status_action.triggered.connect(lambda _=False, le=line_edit, lbl=label: self._force_refresh_enrichment(lbl, le))
         # Query Finder button
         query_button = QPushButton("🔨")
         # query_button.setMaximumWidth(20)
@@ -235,6 +262,18 @@ class CaseBuilderTab(QWidget):
         for i in range(layout.rowCount()):
             field_item = layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
             if field_item and field_item.layout() == field_layout:
+                # Cleanup status action mappings for any QLineEdit in this row
+                fl = field_item.layout()
+                if fl:
+                    for j in range(fl.count()):
+                        w = fl.itemAt(j).widget()
+                        if isinstance(w, QLineEdit) and w in self._status_actions:
+                            try:
+                                act = self._status_actions.pop(w)
+                                if act:
+                                    act.deleteLater()
+                            except Exception:
+                                pass
                 layout.removeRow(i)
                 break
         self.update_entity_positions()
@@ -245,6 +284,60 @@ class CaseBuilderTab(QWidget):
             "IP:", "Domain:", "Hash:", "URL:"
         ]:
             self.add_field(label, self.common_fields_layout)
+
+    def _force_refresh_enrichment(self, label: str, line_edit: QLineEdit):
+        """Force re-enrichment ignoring cached TTL by calling the underlying API and updating cache.
+        Only applies to IP, Domain, Hash, URL types. Shows refreshed status immediately.
+        """
+        try:
+            value = line_edit.text().strip()
+            if not value:
+                return
+            # Map label to enrichment call with forced refresh
+            status = None
+            if label == "IP:" and self.settings_tab.settings_abuse_api_key.text():
+                # Direct call then upsert via get_or_enrich by simulating stale: we bypass by calling API and then upsert explicitly
+                from utils.api_requests import get_abuse_info
+                from utils.entity_store import upsert_entity
+                raw = get_abuse_info(value, self.settings_tab.settings_abuse_api_key.text())
+                upsert_entity("ip", value, raw, source="abuseipdb")
+                status = "refreshed"
+                # Replace any compiled context lines later when recompiled
+            elif label == "Domain:":
+                from utils.api_requests import get_domain_info
+                from utils.entity_store import upsert_entity
+                raw = get_domain_info(value)
+                upsert_entity("domain", value, raw, source="networkcalc")
+                status = "refreshed"
+            elif label == "Hash:" and self.settings_tab.settings_vt_api_key.text():
+                from utils.api_requests import get_hash_info
+                from utils.entity_store import upsert_entity
+                raw = get_hash_info(value, self.settings_tab.settings_vt_api_key.text())
+                upsert_entity("hash", value, raw, source="virustotal")
+                status = "refreshed"
+            elif label == "URL:" and self.settings_tab.settings_urlscan_api_key.text():
+                from utils.api_requests import get_url_info
+                from utils.entity_store import upsert_entity
+                raw = get_url_info(value, self.settings_tab.settings_urlscan_api_key.text())
+                upsert_entity("url", value, raw, source="urlscan")
+                status = "refreshed"
+            else:
+                return
+            # Update indicator immediately
+            self._set_enrichment_status(line_edit, status)
+            # Optionally auto-refresh compiled context if escalation context visible
+            # (Avoid heavy automatic recompute unless we are in escalation and have context field populated)
+            if self.escalation_rb.isChecked():
+                try:
+                    self.compile_case()
+                except Exception:
+                    pass
+        except Exception as e:
+            try:
+                self._set_enrichment_status(line_edit, "error")
+                line_edit.setToolTip(f"Enrichment: error (refresh failed: {e})")
+            except Exception:
+                pass
 
     def update_entity_positions(self):
         for i in range(self.common_fields_layout.rowCount()):
@@ -313,6 +406,41 @@ class CaseBuilderTab(QWidget):
                     return widget.text()
         return ""
 
+    def _get_first_value_by_label(self, target_label: str) -> str:
+        """Helper to get the first QLineEdit text by its label in common_fields_layout."""
+        for i in range(self.common_fields_layout.rowCount()):
+            label_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
+            field_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
+            if not label_item or not field_item:
+                continue
+            label = label_item.widget().text()
+            if label == target_label:
+                layout = field_item.layout()
+                if layout and layout.count() > 0:
+                    w = layout.itemAt(0).widget()
+                    if isinstance(w, QLineEdit):
+                        return w.text().strip()
+        return ""
+
+    def _get_all_values_by_label(self, target_label: str) -> list[str]:
+        values: list[str] = []
+        for i in range(self.common_fields_layout.rowCount()):
+            label_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
+            field_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
+            if not label_item or not field_item:
+                continue
+            label = label_item.widget().text()
+            if label == target_label:
+                layout = field_item.layout()
+                if layout:
+                    for j in range(layout.count()):
+                        w = layout.itemAt(j).widget()
+                        if isinstance(w, QLineEdit):
+                            txt = w.text().strip()
+                            if txt:
+                                values.append(txt)
+        return values
+
     def _get_tab_name(self):
         parent_widget = self.parentWidget()
         if parent_widget and hasattr(parent_widget, 'parentWidget'):
@@ -355,6 +483,14 @@ class CaseBuilderTab(QWidget):
                         widget = field_layout.itemAt(j).widget()
                         if isinstance(widget, QLineEdit):
                             widget.clear()
+                            # Clear mapping if exists
+                            if widget in self._status_actions:
+                                try:
+                                    act = self._status_actions.pop(widget)
+                                    if act:
+                                        act.deleteLater()
+                                except Exception:
+                                    pass
                 if isinstance(label_item.widget(), QLineEdit):
                     label_item.widget().clear()
                 self.common_fields_layout.removeRow(i)
@@ -364,12 +500,17 @@ class CaseBuilderTab(QWidget):
             add_button.deleteLater()
             remove_button.deleteLater()
         self.custom_entities.clear()
+        # Reset any lingering status action mapping
+        self._status_actions.clear()
         self.entity_positions.clear()
         self.generate_default_fields()
         self.common_fields_layout.addRow(self.add_custom_entity_button)
         self.client_combo.setCurrentIndex(0)
-        self.crux_field.clear()
+        self.what_happen_field.clear()
+        self.analyst_assessment.clear()
         self.escalation_info.clear()
+        if hasattr(self, 'additional_context_field'):
+            self.additional_context_field.clear()
         self.sign_off_user.clear()
         self.sign_off_org.clear()
         self.close_reason.clear()
@@ -379,69 +520,158 @@ class CaseBuilderTab(QWidget):
         self.scroll_area.setWidget(self.scroll_content)
 
     def compile_case(self):
-        final_text, other_fields_text, custom_entities_text = [], [], []
         if self.escalation_rb.isChecked():
-            client = self.client_combo.currentText()
-            if client:
-                final_text.append(f"Dear {client},\n")
-        if self.close_case_rb.isChecked():
-            reason = self.close_reason.toPlainText()
-            if reason:
-                final_text.append(f"{reason}\n")
-            info = ""
-            # info =self.close_info.toPlainText()
-            if info:
-                final_text.append(f"{info}\n")
-        else:
-            crux = self.crux_field.text()
-            if crux:
-                final_text.append(f"{crux}\n")
-            info = self.escalation_info.toPlainText()
-            if info:
-                final_text.append(f"{info}\n")
-        for i in range(self.common_fields_layout.rowCount()):
-            label_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
-            field_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
-            if label_item and field_item:
-                label = label_item.widget().text()
-                if label != "Case Link:":
+            # Build Additional Context from entities + enrichment + custom entities
+            context_lines, enriched_lines, custom_lines = [], [], []
+            for i in range(self.common_fields_layout.rowCount()):
+                label_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
+                field_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
+                if label_item and field_item:
+                    label = label_item.widget().text()
+                    if label == "Case Link:":
+                        continue  # Skip case link in context
                     field_layout = field_item.layout()
                     if field_layout:
                         for j in range(field_layout.count()):
                             widget = field_layout.itemAt(j).widget()
                             if isinstance(widget, QLineEdit):
-                                text = widget.text()
-                                if text:
-                                    if label == "IP:" and self.settings_tab.settings_abuse_api_key.text():
-                                        abuse_info = get_abuse_info(text, self.settings_tab.settings_abuse_api_key.text())
-                                        other_fields_text.append(f"\n{label} {text} - {abuse_info}")
-                                    elif label == "Domain:":
-                                        domain_info = get_domain_info(text)
-                                        other_fields_text.append(f"\n{label} {text} - {domain_info}")
-                                    elif label == "Hash:" and self.settings_tab.settings_vt_api_key.text():
-                                        hash_info = get_hash_info(text, self.settings_tab.settings_vt_api_key.text())
-                                        other_fields_text.append(f"\n{label} {text} - {hash_info}")
-                                    elif label == "URL:" and self.settings_tab.settings_urlscan_api_key.text():
-                                        urlinfo = get_url_info(text, self.settings_tab.settings_urlscan_api_key.text())
-                                        other_fields_text.append(f"\n{label} {text} - {urlinfo}")
-                                    else:
-                                        final_text.append(f"{label} {text}")
-        for name_edit, value_edit, *_ in self.custom_entities:
-            name = name_edit.text()
-            value = value_edit.text()
-            if name and value:
-                custom_entities_text.append(f"{name}: {value}")
-        final_text.extend(custom_entities_text)
-        final_text.extend(other_fields_text)
-        if self.escalation_rb.isChecked():
-            full_name = self.settings_tab.settings_sign_off_user.text().strip()
-            first_name = full_name.split()[0] if full_name else ""
-            if first_name:
-                final_text.append(f"\nKind Regards,\n{first_name},")
-            sign_off_org = self.settings_tab.settings_sign_off_org.text()
-            if sign_off_org:
-                final_text.append(f"{sign_off_org}")
-        self.output_text.setPlainText("\n".join(final_text))
+                                text = widget.text().strip()
+                                if not text:
+                                    continue
+                                if label == "IP:" and self.settings_tab.settings_abuse_api_key.text():
+                                    abuse_info, status = get_or_enrich_ip(text, self.settings_tab.settings_abuse_api_key.text(), return_status=True)
+                                    enriched_lines.append(f"{label} {text} - {abuse_info}")
+                                    self._set_enrichment_status(widget, status)
+                                elif label == "Domain:":
+                                    domain_info, status = get_or_enrich_domain(text, return_status=True)
+                                    enriched_lines.append(f"{label} {text} - {domain_info}")
+                                    self._set_enrichment_status(widget, status)
+                                elif label == "Hash:" and self.settings_tab.settings_vt_api_key.text():
+                                    hash_info, status = get_or_enrich_hash(text, self.settings_tab.settings_vt_api_key.text(), return_status=True)
+                                    enriched_lines.append(f"{label} {text} - {hash_info}")
+                                    self._set_enrichment_status(widget, status)
+                                elif label == "URL:" and self.settings_tab.settings_urlscan_api_key.text():
+                                    urlinfo, status = get_or_enrich_url(text, self.settings_tab.settings_urlscan_api_key.text(), return_status=True)
+                                    enriched_lines.append(f"{label} {text} - {urlinfo}")
+                                    self._set_enrichment_status(widget, status)
+                                else:
+                                    # Keep the colon after label for consistent formatting
+                                    context_lines.append(f"{label} {text}")
+                                    self._set_enrichment_status(widget, None)
+            for name_edit, value_edit, *_ in self.custom_entities:
+                name = name_edit.text().strip()
+                value = value_edit.text().strip()
+                if name and value:
+                    custom_lines.append(f"{name}: {value}")
+            combined_context = []
+            if context_lines:
+                combined_context.append("Entities:\n" + "\n".join(context_lines))
+            if custom_lines:
+                combined_context.append("Custom Entities:\n" + "\n".join(custom_lines))
+            if enriched_lines:
+                combined_context.append("Enrichment:\n" + "\n".join(enriched_lines))
+            self.additional_context_field.setPlainText("\n\n".join(combined_context))
+        else:
+            # Preserve existing close case compilation behavior
+            final_text, other_fields_text, custom_entities_text = [], [], []
+            reason = self.close_reason.toPlainText()
+            if reason:
+                final_text.append(f"{reason}\n")
+            info = ""
+            if info:
+                final_text.append(f"{info}\n")
+            for i in range(self.common_fields_layout.rowCount()):
+                label_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
+                field_item = self.common_fields_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
+                if label_item and field_item:
+                    label = label_item.widget().text()
+                    if label != "Case Link:":
+                        field_layout = field_item.layout()
+                        if field_layout:
+                            for j in range(field_layout.count()):
+                                widget = field_layout.itemAt(j).widget()
+                                if isinstance(widget, QLineEdit):
+                                    text = widget.text()
+                                    if text:
+                                        if label == "IP:" and self.settings_tab.settings_abuse_api_key.text():
+                                            abuse_info, status = get_or_enrich_ip(text, self.settings_tab.settings_abuse_api_key.text(), return_status=True)
+                                            other_fields_text.append(f"\n{label} {text} - {abuse_info}")
+                                            self._set_enrichment_status(widget, status)
+                                        elif label == "Domain:":
+                                            domain_info, status = get_or_enrich_domain(text, return_status=True)
+                                            other_fields_text.append(f"\n{label} {text} - {domain_info}")
+                                            self._set_enrichment_status(widget, status)
+                                        elif label == "Hash:" and self.settings_tab.settings_vt_api_key.text():
+                                            hash_info, status = get_or_enrich_hash(text, self.settings_tab.settings_vt_api_key.text(), return_status=True)
+                                            other_fields_text.append(f"\n{label} {text} - {hash_info}")
+                                            self._set_enrichment_status(widget, status)
+                                        elif label == "URL:" and self.settings_tab.settings_urlscan_api_key.text():
+                                            urlinfo, status = get_or_enrich_url(text, self.settings_tab.settings_urlscan_api_key.text(), return_status=True)
+                                            other_fields_text.append(f"\n{label} {text} - {urlinfo}")
+                                            self._set_enrichment_status(widget, status)
+                                        else:
+                                            final_text.append(f"{label} {text}")
+                                            self._set_enrichment_status(widget, None)
+            for name_edit, value_edit, *_ in self.custom_entities:
+                name = name_edit.text()
+                value = value_edit.text()
+                if name and value:
+                    custom_entities_text.append(f"{name}: {value}")
+            final_text.extend(custom_entities_text)
+            final_text.extend(other_fields_text)
+            # sign-off preserved for close case if needed (originally only for escalation; keeping unchanged here optional)
+            self.output_text.setPlainText("\n".join(final_text))
+
+    def _make_status_icon(self, color_hex: str) -> QIcon:
+        pm = QPixmap(12, 12)
+        pm.fill(QColor(0, 0, 0, 0))
+        p = QPainter(pm)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        # stroke
+        p.setPen(QColor(0, 0, 0, 90))
+        # fill
+        p.setBrush(QColor(color_hex))
+        p.drawEllipse(1, 1, 10, 10)
+        p.end()
+        return QIcon(pm)
+
+    def _set_enrichment_status(self, widget: QLineEdit, status: str | None):
+        """Set the inline trailing icon and tooltip for a given entity QLineEdit based on status.
+        status: 'cached' | 'refreshed' | 'error' | None
+        """
+        try:
+            action = self._status_actions.get(widget)
+        except Exception:
+            action = None
+        if not action:
+            return
+
+        if not status:
+            action.setVisible(False)
+            action.setToolTip("")
+            try:
+                widget.setToolTip("")
+            except Exception:
+                pass
+            return
+
+        color = "#9E9E9E"  # default cached gray
+        tip = f"Enrichment: {status}"
+        s = (status or "").lower()
+        if s == "refreshed":
+            color = "#4CAF50"  # green
+        elif s == "cached":
+            color = "#9E9E9E"  # gray
+        elif s == "error":
+            color = "#E53935"  # red
+
+        action.setIcon(self._make_status_icon(color))
+        action.setToolTip(tip)
+        action.setVisible(True)
+        try:
+            widget.setToolTip(tip)
+        except Exception:
+            pass
 
     def _settings_path(self) -> str:
         # src/ui -> src/settings.json

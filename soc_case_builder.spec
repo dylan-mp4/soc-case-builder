@@ -13,6 +13,8 @@ a = Analysis(
     ],
     hiddenimports=[
         'certifi',
+        'websockets',
+        'sqlite3',
         'charset_normalizer',
         'idna',
         'PyQt6',
