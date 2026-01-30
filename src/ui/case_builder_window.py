@@ -478,6 +478,9 @@ class CaseBuilderWindow(QMainWindow):
                     "client": current_tab.client_combo.currentText(),
                     "escalation_info": current_tab.escalation_info.toPlainText(),
                     "close_reason": current_tab.close_reason.toPlainText(),
+                    "what_happen_field": current_tab.what_happen_field.toPlainText(),
+                    "additional_context_field": current_tab.additional_context_field.toPlainText(),
+                    "analyst_assessment": current_tab.analyst_assessment.toPlainText(),
                     # "close_info": current_tab.close_info.toPlainText(),
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
@@ -526,6 +529,9 @@ class CaseBuilderWindow(QMainWindow):
                     "client": current_tab.client_combo.currentText(),
                     "escalation_info": current_tab.escalation_info.toPlainText(),
                     "close_reason": current_tab.close_reason.toPlainText(),
+                    "what_happen_field": current_tab.what_happen_field.toPlainText(),
+                    "additional_context_field": current_tab.additional_context_field.toPlainText(),
+                    "analyst_assessment": current_tab.analyst_assessment.toPlainText(),
                     # "close_info": current_tab.close_info.toPlainText(),
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
@@ -585,6 +591,9 @@ class CaseBuilderWindow(QMainWindow):
                 new_tab.client_combo.setCurrentText(case_data.get("client", ""))
                 new_tab.escalation_info.setPlainText(case_data.get("escalation_info", ""))
                 new_tab.close_reason.setPlainText(case_data.get("close_reason", ""))
+                new_tab.what_happen_field.setPlainText(case_data.get("what_happen_field", ""))
+                new_tab.additional_context_field.setPlainText(case_data.get("additional_context_field", ""))
+                new_tab.analyst_assessment.setPlainText(case_data.get("analyst_assessment", ""))
                 # new_tab.close_info.setPlainText(case_data.get("close_info", ""))
                 if case_data.get("route") == "escalation":
                     new_tab.escalation_rb.setChecked(True)
