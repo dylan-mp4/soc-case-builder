@@ -1,0 +1,41 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run app in QML mode",
+			"type": "shell",
+			"command": "python src/main.py --qml",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run app in QML mode (retry)",
+			"type": "shell",
+			"command": "python src/main.py --qml",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run app in QML mode after SegmentedButton fix",
+			"type": "shell",
+			"command": "python src/main.py --qml",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run app in QML mode after import path fix",
+			"type": "shell",
+			"command": "python src/main.py --qml",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

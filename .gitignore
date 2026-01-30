@@ -1,4 +1,5 @@
 venv
+env
 settings.json
 clients.csv
 src/ui/__pycache__
@@ -12,3 +13,6 @@ dist/
 custom_dict.txt
 src/entities.json
 src/queries.json
+queries.json
+entities.json
+src/entity_cache.sqlite3
