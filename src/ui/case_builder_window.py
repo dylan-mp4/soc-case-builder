@@ -1,10 +1,22 @@
 import json
 import os
 import re
+import threading
+import asyncio
+import secrets
+import hmac
+import hashlib
+import time
+import websockets
 from datetime import datetime
-from PyQt6.QtWidgets import QMainWindow, QTabWidget, QApplication, QInputDialog, QFormLayout, QLineEdit, QFileDialog
+from PyQt6.QtWidgets import (
+    QMainWindow, QTabWidget, QApplication, QInputDialog,
+    QFormLayout, QLineEdit, QFileDialog
+)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QGuiApplication, QAction
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from resources.version import __version__
 from ui.case_builder_tab import CaseBuilderTab
 from ui.settings_dialog import SettingsDialog
@@ -13,11 +25,20 @@ from ui.search_cases import SearchCases
 from ui.query_builder_dialog import QueryBuilderDialog
 from ui.bulk_add_entities_dialog import BulkAddEntitiesDialog
 from ui.stats_for_nerds import StatsForNerds
-import threading
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 
+# Globals for server ↔ app bridge
 flask_main_window = None
+clients = set()
+recent_nonces = set()
+
+# --- Ephemeral secrets per run ---
+SECRET_KEY = secrets.token_bytes(32)
+AUTH_TOKEN = secrets.token_urlsafe(16)
+PORT_WS = 8765
+PORT_HTTP = 8766
+print(f"[DEBUG] SECRET_KEY len={len(SECRET_KEY)} bytes, hex={SECRET_KEY.hex()}")
+print(f"[DEBUG] AUTH_TOKEN = {AUTH_TOKEN}")
+
 
 class CaseBuilderWindow(QMainWindow):
     add_case_signal = pyqtSignal(dict)
@@ -33,45 +54,175 @@ class CaseBuilderWindow(QMainWindow):
             self.show_getting_started()
 
         self.setWindowTitle(f"SOC Case Builder v{__version__}")
-        # Get screen dimensions
         screen = QGuiApplication.primaryScreen().geometry()
-        self.setGeometry(0, 0, screen.width() // 2, screen.height()-100)
+        self.setGeometry(0, 0, screen.width() // 2, screen.height() - 100)
 
         self.central_widget = QTabWidget()
         self.central_widget.tabBarDoubleClicked.connect(self.handle_tab_double_click)
         self.central_widget.tabBarClicked.connect(self.handle_tab_click)
         self.setCentralWidget(self.central_widget)
-        
+
         self.create_menu()
         self.case_builder_tab = CaseBuilderTab(self.settings_dialog)
         self.central_widget.addTab(self.case_builder_tab, "Case 1")
 
+        # Start servers (Flask + WS)
         self.start_flask_server()
 
     def start_flask_server(self):
         app = Flask(__name__)
-        CORS(app)
+        CORS(app, resources={r"/*": {"origins": "*"}})
 
+        # --- /receive: API integrations post JSON cases here ---
         @app.route('/receive', methods=['POST'])
         def receive():
-            data = request.get_json()
-            print(f"Raw Recieved data: {data}")  # Debug print
+            data = request.get_json(force=True)
+            print(f"[API] Raw Received data: {data}")
             original_event_str = data.get("original-event", "")
             try:
                 original_event = json.loads(original_event_str)
             except Exception as e:
                 print("Failed to parse original-event JSON:", e)
                 original_event = {}
-            # Merge outer fields into original_event
+
             for key in ("case-url-link", "alert-title", "organization"):
                 if key in data:
                     original_event[key] = data[key]
-            print(f"Received data: {original_event}")
+
+            print(f"[API] Parsed Case Data: {original_event}")
             if flask_main_window:
                 flask_main_window.add_case_from_api(original_event)
             return jsonify({"status": "received"})
 
-        threading.Thread(target=lambda: app.run(port=5000, debug=False, use_reloader=False), daemon=True).start()
+        # --- /session: gives Chrome extension ephemeral keys ---
+        @app.route("/session")
+        def get_session():
+            return jsonify({
+                "auth_token": AUTH_TOKEN,
+                "secret_key": SECRET_KEY.hex()
+            })
+        @app.route("/sl/api/send_notes", methods=["POST"])
+        def send_notes():
+            data = request.get_json(force=True)
+            print(f"[API] Received note data: {data}")
+            # you can process or save it here if needed
+            if flask_main_window:
+                flask_main_window.add_case_from_api(data)
+            return jsonify({"status": "ok", "message": "note received"})
+
+        # Start Flask
+        flask_thread = threading.Thread(
+            target=lambda: app.run(host="127.0.0.1", port=PORT_HTTP, debug=False, use_reloader=False),
+            daemon=True
+        )
+        flask_thread.start()
+
+        # --- HMAC helpers ---
+        def canonical_json(obj: dict) -> str:
+            # Recursively sort all dict keys for deterministic signing
+            def deep_sort(x):
+                if isinstance(x, dict):
+                    return {k: deep_sort(x[k]) for k in sorted(x)}
+                elif isinstance(x, list):
+                    return [deep_sort(i) for i in x]
+                else:
+                    return x
+            return json.dumps(deep_sort(obj), separators=(",", ":"), ensure_ascii=False)
+
+        def sign_message(obj: dict) -> str:
+            msg = canonical_json(obj)
+            return hmac.new(SECRET_KEY, msg.encode("utf-8"), hashlib.sha256).hexdigest()
+
+        def verify_message(obj: dict, sig: str) -> bool:
+            msg = canonical_json(obj)
+            expected = hmac.new(SECRET_KEY, msg.encode("utf-8"), hashlib.sha256).hexdigest()
+            return hmac.compare_digest(expected, sig)
+
+        def is_fresh(t: float, nonce: str) -> bool:
+            now = time.time()
+            if not isinstance(t, (int, float)) or not isinstance(nonce, str):
+                return False
+            if abs(now - t) > 10 or nonce in recent_nonces or len(nonce) == 0:
+                return False
+            recent_nonces.add(nonce)
+            if len(recent_nonces) > 10000:
+                recent_nonces.clear()
+            return True
+
+        # --- WebSocket handler ---
+        async def handle_client(ws):
+            print(f"[+] WebSocket connection from {ws.remote_address}")
+            try:
+                handshake = json.loads(await ws.recv())
+                if handshake.get("auth") != AUTH_TOKEN:
+                    print("[-] Unauthorized WebSocket client")
+                    await ws.close()
+                    return
+
+                await ws.send(json.dumps({"info": "Authenticated"}))
+                clients.add(ws)
+
+                async for raw in ws:
+                    try:
+                        packet = json.loads(raw)
+                    except json.JSONDecodeError:
+                        print("[-] Invalid JSON packet")
+                        continue
+
+                    data, sig = packet.get("data"), packet.get("sig")
+                    if not data or not sig or not verify_message(data, sig):
+                        print("[-] Invalid signature")
+                        continue
+                    if not is_fresh(data.get("t"), data.get("nonce", "")):
+                        print("[-] Replay/stale message")
+                        continue
+
+                    msg_text = str(data.get("msg", ""))
+                    print(f"[<] Verified from Chrome:", msg_text)
+
+                    if msg_text.startswith("add_case:"):
+                        try:
+                            event = json.loads(msg_text.split("add_case:", 1)[1])
+                            flask_main_window.add_case_from_api(event)
+                        except Exception as e:
+                            print("Error adding case via WS:", e)
+
+                    # Echo back
+                    echo = {
+                        "t": time.time(),
+                        "nonce": secrets.token_hex(8),
+                        "echo": f"Got: {msg_text}"
+                    }
+                    await ws.send(json.dumps({"data": echo, "sig": sign_message(echo)}))
+
+            except websockets.ConnectionClosed:
+                print("[-] WebSocket disconnected")
+            finally:
+                clients.discard(ws)
+
+        # --- Start WebSocket ---
+        async def start_ws():
+            print(f"[*] WebSocket: ws://127.0.0.1:{PORT_WS}")
+            print(f"[*] HTTP API:  http://127.0.0.1:{PORT_HTTP}/session")
+            async with websockets.serve(handle_client, "127.0.0.1", PORT_WS):
+                await asyncio.Future()
+
+        def run_ws():
+            asyncio.run(start_ws())
+
+        ws_thread = threading.Thread(target=run_ws, daemon=True)
+        ws_thread.start()
+
+        # --- Broadcast helper for real-time Chrome updates ---
+        async def broadcast_to_clients(msg: str):
+            if not clients:
+                return
+            payload = {"t": time.time(), "nonce": secrets.token_hex(8), "msg": msg}
+            packet = {"data": payload, "sig": sign_message(payload)}
+            await asyncio.gather(*(c.send(json.dumps(packet)) for c in list(clients)))
+
+        # expose to instance
+        self._broadcast_fn = lambda m: asyncio.run(broadcast_to_clients(m))
 
     def add_case_from_api(self, event_dict):
         print("add_case_from_api called!")
@@ -325,9 +476,11 @@ class CaseBuilderWindow(QMainWindow):
                     "custom_entities": [],
                     "route": "close" if current_tab.close_case_rb.isChecked() else "escalation",
                     "client": current_tab.client_combo.currentText(),
-                    "crux": current_tab.crux_field.text(),
                     "escalation_info": current_tab.escalation_info.toPlainText(),
                     "close_reason": current_tab.close_reason.toPlainText(),
+                    "what_happen_field": current_tab.what_happen_field.toPlainText(),
+                    "additional_context_field": current_tab.additional_context_field.toPlainText(),
+                    "analyst_assessment": current_tab.analyst_assessment.toPlainText(),
                     # "close_info": current_tab.close_info.toPlainText(),
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
@@ -374,9 +527,11 @@ class CaseBuilderWindow(QMainWindow):
                     "custom_entities": [],
                     "route": "close" if current_tab.close_case_rb.isChecked() else "escalation",
                     "client": current_tab.client_combo.currentText(),
-                    "crux": current_tab.crux_field.text(),
                     "escalation_info": current_tab.escalation_info.toPlainText(),
                     "close_reason": current_tab.close_reason.toPlainText(),
+                    "what_happen_field": current_tab.what_happen_field.toPlainText(),
+                    "additional_context_field": current_tab.additional_context_field.toPlainText(),
+                    "analyst_assessment": current_tab.analyst_assessment.toPlainText(),
                     # "close_info": current_tab.close_info.toPlainText(),
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
@@ -434,9 +589,11 @@ class CaseBuilderWindow(QMainWindow):
 
                 # Load other fields
                 new_tab.client_combo.setCurrentText(case_data.get("client", ""))
-                new_tab.crux_field.setText(case_data.get("crux", ""))
                 new_tab.escalation_info.setPlainText(case_data.get("escalation_info", ""))
                 new_tab.close_reason.setPlainText(case_data.get("close_reason", ""))
+                new_tab.what_happen_field.setPlainText(case_data.get("what_happen_field", ""))
+                new_tab.additional_context_field.setPlainText(case_data.get("additional_context_field", ""))
+                new_tab.analyst_assessment.setPlainText(case_data.get("analyst_assessment", ""))
                 # new_tab.close_info.setPlainText(case_data.get("close_info", ""))
                 if case_data.get("route") == "escalation":
                     new_tab.escalation_rb.setChecked(True)

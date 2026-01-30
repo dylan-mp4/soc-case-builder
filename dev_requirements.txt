@@ -4,4 +4,5 @@ pyenchant==3.2.2
 PyQt6==6.9.1
 PyQt6_sip==13.10.0
 Requests==2.32.4
+websockets==16.0
 pyinstaller==6.15.0
