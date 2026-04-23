@@ -38,14 +38,14 @@ jobs:
           if (!(Test-Path ".venv")) {
             python -m venv .venv
           }
-          .venv\Scripts\pip install --upgrade pip
-          .venv\Scripts\pip install -r dev_requirements.txt
+          .venv\Scripts\python -m pip install --upgrade pip
+          .venv\Scripts\python -m pip install -r dev_requirements.txt
 
       - name: Verify PyQt6 installation
         shell: pwsh
         run: |
           Write-Host "Verifying installed packages..."
-          .venv\Scripts\pip list | Select-String -Pattern "PyQt6|pyinstaller"
+          .venv\Scripts\python -m pip list | Select-String -Pattern "PyQt6|pyinstaller"
           Write-Host "`nTesting PyQt6 import..."
           .venv\Scripts\python -c "import PyQt6; print('PyQt6 imported successfully'); print('PyQt6 location:', PyQt6.__file__)"
           Write-Host "`nPython site-packages location..."
@@ -86,18 +86,22 @@ jobs:
           }
 
       - name: Build updater.exe with PyInstaller
+        shell: pwsh
         run: |
-          .venv\Scripts\pyinstaller updater.spec
+          .venv\Scripts\python -m PyInstaller --clean updater.spec
 
       - name: Copy updater.exe to dist/soc_case_builder
+        shell: pwsh
         run: |
           Copy-Item -Path dist\updater\updater.exe -Destination dist\soc_case_builder\updater.exe
 
       - name: Zip the executable and updater
+        shell: pwsh
         run: |
-          powershell Compress-Archive -Path dist/soc_case_builder -DestinationPath dist/soc_case_builder.zip
+          Compress-Archive -Path dist/soc_case_builder -DestinationPath dist/soc_case_builder.zip -Force
 
       - name: Create Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -109,6 +113,7 @@ jobs:
           prerelease: false
 
       - name: Upload Release Asset
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
